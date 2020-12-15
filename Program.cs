@@ -1,8 +1,5 @@
 ﻿using System;
-using System.Globalization;
 using System.IO;
-using System.Runtime.ExceptionServices;
-using System.Security.Cryptography;
 
 namespace S8Debugger
 {
@@ -161,6 +158,9 @@ namespace S8Debugger
                         case "RUN":
                             currentAddress = s8d.Run();
                             break;
+                        case "RUNV":
+                            currentAddress = s8d.Run(true);
+                            break;
 
                         case "REGS":
                             s8d.Regs();
@@ -302,6 +302,7 @@ namespace S8Debugger
             Console.WriteLine("FØDE  - SET INPUT hexhexhex");
             Console.WriteLine("PC    - SET pc = 0xNNNN");
             Console.WriteLine("RUN   - Run program from 0");
+            Console.WriteLine("RUNV  - Run program from 0 with verbose output");
             Console.WriteLine("REGS  - Dump registers");
             Console.WriteLine("RESET - Reset registers");
             Console.WriteLine("STEP  - Step PC [steps]");

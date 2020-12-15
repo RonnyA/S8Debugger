@@ -169,13 +169,13 @@ namespace S8Debugger
             state.stdout = "";
         }
 
-        public void Run()
+        public void Run(bool verbose = false)
         {
             ResetRegs();
-            RunUntil(state.memoryUsed);
+            RunUntil(state.memoryUsed, verbose);
         }
 
-        internal bool RunUntil(int stop_pc_at)
+        internal bool RunUntil(int stop_pc_at, bool verbose = false)
         {
 
             if (state.memoryUsed == 0)
@@ -202,7 +202,7 @@ namespace S8Debugger
                 S8Instruction s8 = new S8Instruction(opcode, param);
                 state.pc += 2;
 
-                if (!ExecuteInstruction(s8))
+                if (!ExecuteInstruction(s8, verbose))
                 {
                     state.crashed = true;                    
                 }
@@ -220,9 +220,10 @@ namespace S8Debugger
         }
 
 
-        public bool ExecuteInstruction(S8Instruction instr)
+        public bool ExecuteInstruction(S8Instruction instr, bool verbose = false)
         {
-            // HALT
+            if (verbose) VerboseLogLine(instr);
+             // HALT
             if (instr.operationClass == 0x0) return false;
 
             // SET
@@ -369,6 +370,70 @@ namespace S8Debugger
             }
 
             return true;
+        }
+
+        public byte[] prevRegs = new byte[16];
+        private void VerboseLogLine(S8Instruction instr)
+        {
+            var regs = GetChangedRegs();
+            if (!string.IsNullOrEmpty(regs)) Console.WriteLine(regs);
+            Console.WriteLine($"{InstructionLogLine(instr)}");
+            prevRegs = (byte[])state.regs.Clone();
+        }
+
+        private string GetChangedRegs()
+        {
+            var changed = string.Empty;
+            for (int i = 0; i < 15; i++)
+            {
+                if (prevRegs[i] != state.regs[i])
+                    changed += $"[r{i}: {prevRegs[i]} -> {state.regs[i]}]";
+            }
+            return changed;
+        }
+        
+        private string InstructionLogLine(S8Instruction instr)
+        {
+            if (instr.operationClass == 0x0) return "STOPP"; // SET
+            else if (instr.operationClass == 0x1) return $"SETT r{instr.operation}, {instr.value}"; // SET
+            else if (instr.operationClass == 0x2) return $"SETT r{instr.operation}, r{instr.argument1}"; // SET
+            else if (instr.operationClass == 0x3) return "FINN"; // FINN
+            else if (instr.operationClass == 0x4)
+            {
+                if (instr.operation == 0) return $"LAST r{instr.argument1}";  // LOAD
+                else if (instr.operation == 1) return $"LAGR r{instr.argument1}"; // STORE
+            }
+            else if (instr.operationClass == 0x5) // ALU
+            {
+                if (instr.operation == 0x0) return $"OG r{instr.argument1}, r{instr.argument2}";
+                else if (instr.operation == 0x1) return $"ELLER r{instr.argument1}, r{instr.argument2}";
+                else if (instr.operation == 0x2) return $"XELLER r{instr.argument1}, r{instr.argument2}";
+                else if (instr.operation == 0x3) return $"VSKIFT r{instr.argument1}, r{instr.argument2}";
+                else if (instr.operation == 0x4) return $"HSKIFT r{instr.argument1}, r{instr.argument2}";
+                else if (instr.operation == 0x5) return $"PLUSS r{instr.argument1}, r{instr.argument2}";
+                else if (instr.operation == 0x6) return $"MINUS r{instr.argument1}, r{instr.argument2}";
+            }
+
+            else if (instr.operationClass == 0x6) // I/O
+            {
+                if (instr.operation == 0x0) return $"LES r{instr.argument1}"; // READ
+                else if (instr.operation == 0x1) return $"SKRIV r{instr.argument1}"; // WRITE
+            }
+            else if (instr.operationClass == 0x7) // CMP
+            {
+                if (instr.operation == 0x0) return $"LIK r{instr.argument1}, r{instr.argument2}";
+                else if (instr.operation == 0x1) return $"ULIK r{instr.argument1}, r{instr.argument2}";
+                else if (instr.operation == 0x2) return $"ME r{instr.argument1}, r{instr.argument2}";
+                else if (instr.operation == 0x3) return $"MEL r{instr.argument1}, r{instr.argument2}";
+                else if (instr.operation == 0x4) return $"SE r{instr.argument1}, r{instr.argument2}";
+                else if (instr.operation == 0x5) return $"SEL r{instr.argument1}, r{instr.argument2}";
+            }
+            else if (instr.operationClass == 0x8) return "HOPP"; // JMP
+            else if (instr.operationClass == 0x9 && state.flag) return "BHOPP"; // COND JMP
+            else if (instr.operationClass == 0xa) return "TUR"; // CALL
+            else if (instr.operationClass == 0xb) return "RETUR"; // RET
+            else if (instr.operationClass == 0xc) return "NOPE"; //NOP
+            return $"UNKNOWN: [operationClass {instr.operationClass}] [operation {instr.operation}] [arg1 {instr.argument1}] [arg2 {instr.argument2}] [addr {instr.address}] [val {instr.value}]";
         }
     }
 }
