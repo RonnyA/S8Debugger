@@ -3,8 +3,11 @@ MIT License
 Copyright (c) 2020 Ronny Hansen
 
 A big part of this code is a C# implementation of the TypeScript version created by PST 
+* Repository: https://github.com/PSTNorge/slede8
+
 Copyright (c) 2020 Politiets sikkerhetstjeneste
-https://github.com/PSTNorge/slede8
+* License: https://github.com/PSTNorge/slede8/blob/main/LICENSE
+
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
