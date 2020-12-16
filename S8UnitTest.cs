@@ -21,6 +21,7 @@ namespace S8Debugger
             int lineCounter = 0;
             int errCnt = 0;
             int currentaddress = 0;
+            bool verbose = false;
 
             if (s8d is null) return 0;
 
@@ -54,11 +55,24 @@ namespace S8Debugger
                     var cmds = actualLine.Split(" ");
                     if (cmds.Length < 2)
                         continue;
+                    string param = string.Empty;
 
                     var command = cmds[1].ToUpper().Trim();
-                    var param = cmds[2].ToUpper().Trim();
+                    if (cmds.Length > 2)
+                    {
+                        param = cmds[2].ToUpper().Trim();
+                    }
+
                     switch (command)
                     {
+                        case "VERBOSE":
+                            verbose = true;
+                            if (param.Contains("FALSE"))
+                            {
+                                verbose = false;
+                            }
+                            
+                            break;
                         case "TICKS":
                         case "MAXTICKS":
                             int newTicks = 0;
@@ -111,7 +125,7 @@ namespace S8Debugger
 
                 s8d.SetInput(bInput);
 
-                currentaddress = s8d.Run(false);
+                currentaddress = s8d.Run(false, verbose);
                 string stdout = s8d.GetOutput();
 
                 if (input[1].Equals(stdout))
