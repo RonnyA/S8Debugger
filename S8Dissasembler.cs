@@ -12,8 +12,8 @@ using System.Xml.Serialization;
 namespace S8Debugger
 {
     public class S8Dissasembler
-    {        
-        byte[] bytes = null;
+    {
+        byte[] bytes = new byte[4096];
         S8CPU cpu = new S8CPU();
 
         public bool Init(string fname, bool force = false)
@@ -39,8 +39,8 @@ namespace S8Debugger
             return true;
         }
 
-        public int  MemoryDump(int start, int length, bool showAddress = false)
-        {            
+        public int MemoryDump(int start, int length, bool showAddress = false, bool allowOutsideLoadedMemory = false)
+        {
             int currentAddress = start;
             int endAddress = currentAddress + length;
 
@@ -51,25 +51,30 @@ namespace S8Debugger
                 //endAddress = cpu.state.memoryUsed;
             }
 
-            if (endAddress > cpu.state.memoryUsed)
+            if (!allowOutsideLoadedMemory)
             {
-                endAddress = cpu.state.memoryUsed;
+                if (endAddress > cpu.state.memoryUsed)
+                {
+                    endAddress = cpu.state.memoryUsed;
+                }
             }
 
-            
 
             int lineCounter = 0;
 
             string line1 = "";
             string line2 = "";
 
+
             while (currentAddress < endAddress)
             {
-                
+
                 if (lineCounter == 0)
                 {
+                    string sHexAddress = currentAddress.ToString("X3");
+                    Console.WriteLine("m" + sHexAddress + ":");
                     line1 = ".DATA ";
-                    line2 = ";" + currentAddress.ToString("X4") + ":  ";
+                    line2 = ";" + currentAddress.ToString("X3") + ":  ";
                 }
                 else
                 {
@@ -104,7 +109,7 @@ namespace S8Debugger
 
                     lineCounter = 0;
                     Console.WriteLine();
-                }                
+                }
             }
 
             Console.WriteLine();
@@ -112,14 +117,14 @@ namespace S8Debugger
             return currentAddress;
         }
 
-        
+
 
         internal void Reset()
         {
             cpu.ResetRegs();
         }
 
-        public int Dissasemble(int start, int length, bool showAddress = false)
+        public int Dissasemble(int start, int length, bool showAddress = false, bool allowOutsideLoadedMemory = false)
         {
             S8Instruction s8i;
 
@@ -132,29 +137,45 @@ namespace S8Debugger
                 endAddress = currentAddress + 8;
                 //endAddress = cpu.state.memoryUsed;
             }
-
-            if (endAddress > cpu.state.memoryUsed)
+            if (!allowOutsideLoadedMemory)
             {
-                endAddress = cpu.state.memoryUsed;
+                if (endAddress > cpu.state.memoryUsed)
+                {
+                    endAddress = cpu.state.memoryUsed;
+                }
             }
 
             while (currentAddress < endAddress)
             {
-                string sHexAddress = currentAddress.ToString("X4");
+                string sHexAddress = currentAddress.ToString("X3");
 
                 byte opcode = bytes[currentAddress++];
                 byte param = bytes[currentAddress++];
-                
+
                 s8i = new S8Instruction(opcode, param);
                 s8i.DecodeInstruction();
+
+                if (s8i.ValidInstruction)
+                {
+                    if (!showAddress)
+                        Console.WriteLine("a" + sHexAddress + ":");
+                }
+                else
+                {
+                    if (!showAddress)
+                        Console.WriteLine("m" + sHexAddress + ":");
+                }
 
                 if (showAddress)
                 {
                     string sOpcode = opcode.ToString("X2");
                     string sParam = param.ToString("X2");
-                    Console.Write("A["+sHexAddress + "] | I["+sOpcode + " " + sParam + "] ");
+                    Console.Write("A[" + sHexAddress + "] | I[" + sOpcode + " " + sParam + "] ");
                 }
-                
+
+
+
+
                 if (s8i.ValidInstruction)
                 {
                     Console.WriteLine(s8i.DecodedInstruction);
@@ -169,15 +190,26 @@ namespace S8Debugger
 
         }
 
-        internal int SetPC(int start)
+        internal int SetPC(int start, bool allowOutsideLoadedMemory = false)
         {
-            if (start > cpu.state.memoryUsed)
-            {
+            if (start > 0xFFF)
                 start = 0;
+
+            if (!allowOutsideLoadedMemory)
+            {
+                if (start > cpu.state.memoryUsed)
+                {
+                    start = 0;
+                }
             }
             cpu.state.pc = start;
 
             return cpu.state.pc;
+        }
+
+        internal void SetInput(byte[] inputBuffer)
+        {
+            cpu.state.stdin = inputBuffer;
         }
 
         internal void SetInput(string v)
@@ -185,12 +217,20 @@ namespace S8Debugger
             string s = ConvertHex2Asii(v);
 
             cpu.state.stdin = new byte[s.Length];
-            for (int i=0;i<s.Length;i++)
+            for (int i = 0; i < s.Length; i++)
             {
                 cpu.state.stdin[i] = (byte)s[i];
-            }            
+            }
+        }
+        internal string GetOutput()
+        {
+            return cpu.state.stdout;
         }
 
+        internal void ClearOutput()
+        {
+            cpu.state.stdout = "";
+        }
 
         public void SetMaxTicks(int Ticks)
         {
@@ -202,18 +242,21 @@ namespace S8Debugger
             return cpu.state.maxTicks;
         }
 
-        public int Run(bool verbose = false)
+
+   
+        public int Run(bool ShowOppgulp = true, bool verbose = false)
         {
             var stopwatch = new Stopwatch();
-            stopwatch.Start(); 
-            
-            cpu.Run(verbose);
+            stopwatch.Start();
+
+            cpu.Run(bool verbose = false);
 
             stopwatch.Stop();
             var elapsed_time = stopwatch.ElapsedMilliseconds;
 
             Console.WriteLine("Elapsed time " + elapsed_time + "ms, Ticks " + cpu.state.tick);
-            Oppgulp();
+            if (ShowOppgulp)
+                Oppgulp();
             return cpu.state.pc;
         }
 
@@ -286,9 +329,9 @@ namespace S8Debugger
 
         public void Regs()
         {
-            Console.WriteLine("PC [" + cpu.state.pc.ToString("X4") +"]");
-            Console.WriteLine("FLAG [" + cpu.state.flag +"]");            
-            for (int i=0; i<16;i++)
+            Console.WriteLine("PC [" + cpu.state.pc.ToString("X3") + "]");
+            Console.WriteLine("FLAG [" + cpu.state.flag + "]");
+            for (int i = 0; i < 16; i++)
             {
                 Console.Write("R" + i + "[" + cpu.state.regs[i].ToString("X2") + "] ");
             }

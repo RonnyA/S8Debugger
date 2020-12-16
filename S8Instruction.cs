@@ -76,7 +76,7 @@ namespace S8Debugger
 
                     int regs1 = (address & 0x0f00) >> 8;
                     int regs0 = address & 0xff;
-                    DecodedInstruction = "FINN ; r0 = " + regs0.ToString("X2") + "  r1 = " + regs1.ToString("X2");                    
+                    DecodedInstruction = "FINN m" + address.ToString("X3"); //+ " ; r0 = " + regs0.ToString("X2") + "  r1 = " + regs1.ToString("X2");                    
                     ValidInstruction = true;
                     break;
 
@@ -192,25 +192,20 @@ namespace S8Debugger
                     }
                     DecodedInstruction = cmpFunction + "r" + argument1 + ", r" + argument2;
                     break;
-
-                case 0x8:
-                    //int address08 = (param << 4) + operation;
-                    //DecodedInstruction = "HOPP " + jumpAddress.ToString("X4"); // address
-                    DecodedInstruction = "HOPP " + address.ToString("X4"); // address
+                    
+                case 0x8:                    
+                    DecodedInstruction = "HOPP a" + address.ToString("X3"); // address
 
                     ValidInstruction = true;
                     break;
-                case 0x9:
-                    //jumpAddress = (param << 4) + operation;
-                    //DecodedInstruction = "BHOPP " + jumpAddress.ToString("X4");
-                    DecodedInstruction = "BHOPP " + address.ToString("X4");
+                case 0x9:                    
+                    DecodedInstruction = "BHOPP a" + address.ToString("X3");
 
                     ValidInstruction = true;
                     break;
 
-                case 0x0A:
-                    //DecodedInstruction = "TUR " + operationClass + " 0x" + sParam;
-                    DecodedInstruction = "TUR " + " 0x" + address.ToString("X4");
+                case 0x0A:                    
+                    DecodedInstruction = "TUR a" + " 0x" + address.ToString("X3");
                     ValidInstruction = true;
                     break;
                 case 0x0B:

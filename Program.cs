@@ -10,7 +10,7 @@ namespace S8Debugger
 
             string defaultS8File = @"s8.s8";
 
-            S8Dissasembler s8d = new S8Dissasembler();            
+            S8Dissasembler s8d = new S8Dissasembler();
 
             s8d.Init(defaultS8File);
 
@@ -37,7 +37,7 @@ namespace S8Debugger
                 {
                     Console.Write("s8 [");
                 }
-                Console.Write(currentAddress.ToString("X4") + "] ");
+                Console.Write(currentAddress.ToString("X3") + "] ");
                 string input = Console.ReadLine();
 
                 try
@@ -84,7 +84,7 @@ namespace S8Debugger
                                 {
                                     Console.WriteLine("Assembly FAILED!!");
                                 }
-                                else                                
+                                else
                                 {
                                     s8d = new S8Dissasembler();
                                     s8d.InitFromMemory(s8prog);
@@ -137,7 +137,7 @@ namespace S8Debugger
                                 }
                             }
                             break;
-                        
+
                         case "INPUT":
                         case "FØDE":
                             if (cmd.Length > 1)
@@ -152,6 +152,19 @@ namespace S8Debugger
 
                         case "PC": // set PC
                             currentAddress = s8d.SetPC(start);
+                            break;
+
+                        case "PC!": // set PC
+                            currentAddress = s8d.SetPC(start, true);
+                            break;
+
+
+                        case "UNITTEST":
+                            if (cmd.Length > 1)
+                            {
+                                S8UnitTest s8unit = new S8UnitTest();
+                                currentAddress = s8unit.RunUnitTest(s8d, cmd[1]);
+                            }
                             break;
 
                         case "R":
@@ -176,7 +189,7 @@ namespace S8Debugger
                         case "S":
                         case "STEP":
                             if (start > 0)
-                            {                                
+                            {
                                 currentAddress = s8d.Step(start);
                             }
                             else
@@ -191,7 +204,7 @@ namespace S8Debugger
                             {
                                 s8d.SetMaxTicks(start);
                             }
-                            
+
                             Console.WriteLine("MaxTicks is set to " + s8d.GetMaxTicks().ToString());
                             break;
                         case ":":
@@ -203,9 +216,16 @@ namespace S8Debugger
                         case "D":
                             currentAddress = s8d.Dissasemble(start, length, showAddress);
                             break;
+                        case "D!":
+                            currentAddress = s8d.Dissasemble(start, length, showAddress, true);
+                            break;
                         case "M":
                             currentAddress = s8d.MemoryDump(start, length, showAddress);
                             break;
+                        case "M!":
+                            currentAddress = s8d.MemoryDump(start, length, showAddress, true);
+                            break;
+
                         case "H":
                         case "HELP":
                         case "?":
@@ -266,7 +286,7 @@ namespace S8Debugger
                 Console.WriteLine("Can't find SLEDE8 file " + sledeFile);
             }
             S8Assembler s8 = new S8Assembler();
-            
+
             return s8.AssembleFile(sledeFile);
         }
 
@@ -294,19 +314,26 @@ namespace S8Debugger
         static void PrintHelp()
         {
             Console.WriteLine("D - Dissassemble [start] [length]");
-            Console.WriteLine("M - Memory Dump  [start] [length]"); 
+            Console.WriteLine("M - Memory Dump  [start] [length]");
+            Console.WriteLine("Limits itself to inside loaded image");
+            Console.WriteLine();
+
+            Console.WriteLine("D!- Dissassemble [start] [length]");
+            Console.WriteLine("M!- Memory Dump  [start] [length]");
+            Console.WriteLine("Enables access to memory ourside loaded image"); ;
             Console.WriteLine();
 
             Console.WriteLine("");
 
-            Console.WriteLine("FØDE  - SET INPUT hexhexhex");
-            Console.WriteLine("PC    - SET pc = 0xNNNN");
+            Console.WriteLine("INPUT - SET INPUT hexhexhex");
+            Console.WriteLine("PC    - SET pc = xxx");
             Console.WriteLine("RUN   - Run program from 0");
             Console.WriteLine("RUNV  - Run program from 0 with verbose output");
             Console.WriteLine("REGS  - Dump registers");
             Console.WriteLine("RESET - Reset registers");
             Console.WriteLine("STEP  - Step PC [steps]");
             Console.WriteLine("TICKS - Set Max Ticks 0xNN");
+            Console.WriteLine("UNITTEST [filename] - Run unit tests agains [filename]");
             Console.WriteLine("! = Change showaddress flag");
             Console.WriteLine("");
 

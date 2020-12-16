@@ -82,7 +82,7 @@ namespace S8Debugger
         public void SetMaxTicks(int Ticks)
         {
             state.maxTicks = Ticks;
-            ERROR_MESSAGE[(int)ERROR_MESSAGE_ID.resourcesExhausted] = ERROR_MESSAGE[(int)ERROR_MESSAGE_ID.resourcesExhausted].Replace("${maxTicks}", Ticks.ToString());
+            
         }
 
         //const memory = load(executable);
@@ -91,8 +91,13 @@ namespace S8Debugger
 
         public byte[] Load(byte[] executable, bool skipMagicHeader)
         {
+            int oldMaxTicks = DEFAULT_MAX_STEPS;
+            if (state is not null)
+            {
+                oldMaxTicks = state.maxTicks;
+            }
             state = new CpuState();
-            SetMaxTicks(DEFAULT_MAX_STEPS);
+            SetMaxTicks(oldMaxTicks);
 
             ResetRegs();
 
@@ -190,7 +195,8 @@ namespace S8Debugger
             {
                 if (++state.tick > state.maxTicks)
                 {
-                    Console.WriteLine(ERROR_MESSAGE[(int)ERROR_MESSAGE_ID.resourcesExhausted]);
+                    var strErr  = ERROR_MESSAGE[(int)ERROR_MESSAGE_ID.resourcesExhausted].Replace("${maxTicks}", state.tick.ToString());
+                    Console.WriteLine(strErr);
                     return false;
                 }
 
