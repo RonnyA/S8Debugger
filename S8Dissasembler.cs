@@ -146,49 +146,58 @@ namespace S8Debugger
             }
 
             while (currentAddress < endAddress)
-            {
-                string sHexAddress = currentAddress.ToString("X3");
+            {                
 
                 byte opcode = bytes[currentAddress++];
                 byte param = bytes[currentAddress++];
 
-                s8i = new S8Instruction(opcode, param);
+                s8i = new S8Instruction(opcode, param);                
                 s8i.DecodeInstruction();
 
-                if (s8i.ValidInstruction)
-                {
-                    if (!showAddress)
-                        Console.WriteLine("a" + sHexAddress + ":");
-                }
-                else
-                {
-                    if (!showAddress)
-                        Console.WriteLine("m" + sHexAddress + ":");
-                }
 
-                if (showAddress)
-                {
-                    string sOpcode = opcode.ToString("X2");
-                    string sParam = param.ToString("X2");
-                    Console.Write("A[" + sHexAddress + "] | I[" + sOpcode + " " + sParam + "] ");
-                }
+                Console.WriteLine(s8i.Instruction2Text(currentAddress, showAddress));
 
 
-
-
-                if (s8i.ValidInstruction)
-                {
-                    Console.WriteLine(s8i.DecodedInstruction);
-                }
-                else
-                {
-                    string data = ".DATA 0x" + opcode.ToString("X2");
-                    Console.WriteLine(data + " ; " + s8i.ErrorMessage);
-                }
             }
             return currentAddress;
 
         }
+
+        /*
+        internal void PrettyPrintInstruction(S8Instruction s8i, int currentAddress,bool showAddress)
+        {
+            string sHexAddress = currentAddress.ToString("X3");
+
+            if (s8i.ValidInstruction)
+            {
+                if (!showAddress)
+                    Console.WriteLine("a" + sHexAddress + ":");
+            }
+            else
+            {
+                if (!showAddress)
+                    Console.WriteLine("m" + sHexAddress + ":");
+            }
+
+            if (showAddress)
+            {
+                string sOpcode = s8i.Opcode.ToString("X2");
+                string sParam = s8i.Param.ToString("X2");
+                Console.Write("A[" + sHexAddress + "] | I[" + sOpcode + " " + sParam + "] ");
+            }
+
+
+            if (s8i.ValidInstruction)
+            {
+                Console.WriteLine(s8i.DecodedInstruction);
+            }
+            else
+            {
+                string data = ".DATA 0x" + s8i.Opcode.ToString("X2");
+                Console.WriteLine(data + " ; " + s8i.ErrorMessage);
+            }
+        }
+        */
 
         internal int SetPC(int start, bool allowOutsideLoadedMemory = false)
         {
@@ -244,12 +253,12 @@ namespace S8Debugger
 
 
    
-        public int Run(bool ShowOppgulp = true, bool verbose = false)
+        public int Run(bool ShowOppgulp = true, bool verbose = false, bool showaddress=false)
         {
             var stopwatch = new Stopwatch();
             stopwatch.Start();
 
-            cpu.Run(verbose);
+            cpu.Run(verbose, showaddress);
 
             stopwatch.Stop();
             var elapsed_time = stopwatch.ElapsedMilliseconds;

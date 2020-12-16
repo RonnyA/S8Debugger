@@ -174,13 +174,13 @@ namespace S8Debugger
             state.stdout = "";
         }
 
-        public void Run(bool verbose = false)
+        public void Run(bool verbose = false,bool showaddress=false)        
         {
             ResetRegs();
-            RunUntil(state.memoryUsed, verbose);
+            RunUntil(state.memoryUsed, verbose, showaddress);
         }
 
-        internal bool RunUntil(int stop_pc_at, bool verbose = false)
+        internal bool RunUntil(int stop_pc_at, bool verbose = false, bool showaddress=false)
         {
 
             if (state.memoryUsed == 0)
@@ -208,7 +208,7 @@ namespace S8Debugger
                 S8Instruction s8 = new S8Instruction(opcode, param);
                 state.pc += 2;
 
-                if (!ExecuteInstruction(s8, verbose))
+                if (!ExecuteInstruction(s8, verbose, showaddress))
                 {
                     state.crashed = true;                    
                 }
@@ -226,9 +226,9 @@ namespace S8Debugger
         }
 
 
-        public bool ExecuteInstruction(S8Instruction instr, bool verbose = false)
+        public bool ExecuteInstruction(S8Instruction instr, bool verbose = false, bool showaddress=false)
         {
-            if (verbose) VerboseLogLine(instr);
+            if (verbose) VerboseLogLine(instr, showaddress);
              // HALT
             if (instr.operationClass == 0x0) return false;
 
@@ -379,12 +379,12 @@ namespace S8Debugger
         }
 
         public byte[] prevRegs = new byte[16];
-        private void VerboseLogLine(S8Instruction instr)
+        private void VerboseLogLine(S8Instruction instr, bool showaddress)
         {
             var regs = GetChangedRegs();
             if (!string.IsNullOrEmpty(regs)) Console.WriteLine(regs);
-            instr.DecodeInstruction();
-            Console.WriteLine(instr.DecodedInstruction);
+            instr.DecodeInstruction();            
+            Console.WriteLine(instr.Instruction2Text(state.pc, showaddress));
             prevRegs = (byte[])state.regs.Clone();
         }
 
@@ -394,7 +394,7 @@ namespace S8Debugger
             for (int i = 0; i < 15; i++)
             {
                 if (prevRegs[i] != state.regs[i])
-                    changed += $"[r{i}: {prevRegs[i]} -> {state.regs[i]}]";
+                    changed += $"[r{i}: 0x{prevRegs[i]:X2} -> 0x{state.regs[i]:X2}]"; // #TODO Make it hex -> "X2"
             }
             return changed;
         }

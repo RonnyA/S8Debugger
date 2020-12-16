@@ -169,10 +169,10 @@ namespace S8Debugger
 
                         case "R":
                         case "RUN":
-                            currentAddress = s8d.Run();
+                            currentAddress = s8d.Run(true, false,showAddress);
                             break;
                         case "RUNV":
-                            currentAddress = s8d.Run(true, true);
+                            currentAddress = s8d.Run(true, true, showAddress);
                             break;
 
                         case "REGS":

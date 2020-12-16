@@ -10,6 +10,12 @@ namespace S8Debugger
 {
     public class S8Instruction
     {
+
+        // Helper bytes to keep the original values that created the Instruction
+        public byte Opcode;
+        public byte Param; 
+
+        // decoded fields from opcode + param
         public int operationClass;
         public int operation;
         public int address;
@@ -28,6 +34,10 @@ namespace S8Debugger
         public void init(byte opcode, byte param)
         {
             ValidInstruction = false;
+
+            Opcode = opcode;
+            Param = param;
+
 
             int instruction = opcode | (param << 8);
 
@@ -242,9 +252,45 @@ namespace S8Debugger
 
             }
 
+            
         }
 
+        public string Instruction2Text(int currentAddress, bool showAddress)
+        {
+            string sHexAddress = currentAddress.ToString("X3");
+            string outStr = string.Empty;
 
+            if (ValidInstruction)
+            {
+                if (!showAddress)
+                    outStr += "a" + sHexAddress + ": \r\n";
+            }
+            else
+            {
+                if (!showAddress)
+                    outStr += "m" + sHexAddress + ": \r\n";
+            }
+
+            if (showAddress)
+            {
+                string sOpcode = Opcode.ToString("X2");
+                string sParam = Param.ToString("X2");
+                outStr += "A[" + sHexAddress + "] | I[" + sOpcode + " " + sParam + "] ";
+            }
+
+
+            if (ValidInstruction)
+            {
+                outStr += DecodedInstruction;
+            }
+            else
+            {
+                string data = ".DATA 0x" + Opcode.ToString("X2");
+                outStr += data + " ; " + ErrorMessage;
+            }
+
+            return outStr;
+        }
 
     };
 }
