@@ -249,7 +249,7 @@ namespace S8Debugger
             var stopwatch = new Stopwatch();
             stopwatch.Start();
 
-            cpu.Run(bool verbose = false);
+            cpu.Run(verbose);
 
             stopwatch.Stop();
             var elapsed_time = stopwatch.ElapsedMilliseconds;
