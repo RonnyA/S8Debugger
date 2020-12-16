@@ -242,13 +242,14 @@ namespace S8Debugger
             return cpu.state.maxTicks;
         }
 
+
    
-        public int Run(bool ShowOppgulp = true)
+        public int Run(bool ShowOppgulp = true, bool verbose = false)
         {
             var stopwatch = new Stopwatch();
             stopwatch.Start();
 
-            cpu.Run();
+            cpu.Run(verbose);
 
             stopwatch.Stop();
             var elapsed_time = stopwatch.ElapsedMilliseconds;

@@ -174,13 +174,13 @@ namespace S8Debugger
             state.stdout = "";
         }
 
-        public void Run()
+        public void Run(bool verbose = false)
         {
             ResetRegs();
-            RunUntil(state.memoryUsed);
+            RunUntil(state.memoryUsed, verbose);
         }
 
-        internal bool RunUntil(int stop_pc_at)
+        internal bool RunUntil(int stop_pc_at, bool verbose = false)
         {
 
             if (state.memoryUsed == 0)
@@ -208,7 +208,7 @@ namespace S8Debugger
                 S8Instruction s8 = new S8Instruction(opcode, param);
                 state.pc += 2;
 
-                if (!ExecuteInstruction(s8))
+                if (!ExecuteInstruction(s8, verbose))
                 {
                     state.crashed = true;                    
                 }
@@ -226,9 +226,10 @@ namespace S8Debugger
         }
 
 
-        public bool ExecuteInstruction(S8Instruction instr)
+        public bool ExecuteInstruction(S8Instruction instr, bool verbose = false)
         {
-            // HALT
+            if (verbose) VerboseLogLine(instr);
+             // HALT
             if (instr.operationClass == 0x0) return false;
 
             // SET
@@ -376,6 +377,28 @@ namespace S8Debugger
 
             return true;
         }
+
+        public byte[] prevRegs = new byte[16];
+        private void VerboseLogLine(S8Instruction instr)
+        {
+            var regs = GetChangedRegs();
+            if (!string.IsNullOrEmpty(regs)) Console.WriteLine(regs);
+            instr.DecodeInstruction();
+            Console.WriteLine(instr.DecodedInstruction);
+            prevRegs = (byte[])state.regs.Clone();
+        }
+
+        private string GetChangedRegs()
+        {
+            var changed = string.Empty;
+            for (int i = 0; i < 15; i++)
+            {
+                if (prevRegs[i] != state.regs[i])
+                    changed += $"[r{i}: {prevRegs[i]} -> {state.regs[i]}]";
+            }
+            return changed;
+        }
+        
     }
 }
    
