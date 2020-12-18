@@ -146,7 +146,8 @@ namespace S8Debugger
             }
 
             while (currentAddress < endAddress)
-            {                
+            {
+                int lineAddress = currentAddress;
 
                 byte opcode = bytes[currentAddress++];
                 byte param = bytes[currentAddress++];
@@ -155,7 +156,7 @@ namespace S8Debugger
                 s8i.DecodeInstruction();
 
 
-                Console.WriteLine(s8i.Instruction2Text(currentAddress, showAddress));
+                Console.WriteLine(s8i.Instruction2Text(lineAddress, showAddress));
 
 
             }
