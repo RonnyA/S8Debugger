@@ -212,6 +212,7 @@ namespace S8Debugger
                 {
                     state.crashed = true;                    
                 }
+                
             }
 
             if (state.crashed) return false;
@@ -384,7 +385,7 @@ namespace S8Debugger
             var regs = GetChangedRegs();
             if (!string.IsNullOrEmpty(regs)) Console.WriteLine(regs);
             instr.DecodeInstruction();            
-            Console.WriteLine(instr.Instruction2Text(state.pc, showaddress));
+            Console.WriteLine(instr.Instruction2Text(state.pc-2, showaddress));
             prevRegs = (byte[])state.regs.Clone();
         }
 
