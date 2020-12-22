@@ -13,6 +13,25 @@ namespace S8Debugger
     // https://github.com/PSTNorge/slede8/blob/main/src/assembler.ts
     public class S8Assembler
     {
+
+        #region Eventing
+
+        public delegate void LogMessageEventHandler(Object sender, LogMessageEventArgs e);
+
+        public event LogMessageEventHandler Message;
+        protected virtual void OnLogMessage(LogMessageEventArgs e)
+        {
+            LogMessageEventHandler handler = Message;
+            handler?.Invoke(this, e);
+        }
+
+        private void LogMessage(string message = "")
+        {
+            LogMessageEventArgs ea = new LogMessageEventArgs();
+            ea.LogMessage = message;
+            OnLogMessage(ea);
+        }
+        #endregion
         public static readonly UInt16 UNDEFINED = 0XFFFF;
 
         class LabelDefinition
@@ -110,17 +129,23 @@ namespace S8Debugger
             //    s8file= s8file+ ".s8";
             //}
 
+            if (!File.Exists(sledeFile))
+            {
+                LogMessage("Can't find SLEDE8 file " + sledeFile);
+                return null;
+            }
+
             var sledeTekst = File.ReadAllText(sledeFile);
-            Console.WriteLine($"Lest sledetekst fra {sledeFile}, {sledeTekst.Length} tegn");
-            Console.WriteLine("Compilerere...");
+            LogMessage($"Lest sledetekst fra {sledeFile}, {sledeTekst.Length} tegn");
+            LogMessage("Compilerere...");
 
             var result = assemble(sledeTekst);
 
-            Console.WriteLine($"Compiled OK! {result.pdb.Length} instructions");
+            LogMessage($"Compiled OK! {result.pdb.Length} instructions");
 
             if (s8file.Length > 0)
             {
-                Console.WriteLine($"Skriver S8 file {s8file}");
+                LogMessage($"Skriver S8 file {s8file}");
                 File.WriteAllBytes(s8file, result.exe);
             }
 

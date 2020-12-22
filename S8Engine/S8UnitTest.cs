@@ -9,31 +9,50 @@ namespace S8Debugger
 {
     public class S8UnitTest
     {
+
+        #region Eventing
+
+        public delegate void LogMessageEventHandler(Object sender, LogMessageEventArgs e);
+
+        public event LogMessageEventHandler Message;
+        protected virtual void OnLogMessage(LogMessageEventArgs e)
+        {
+            LogMessageEventHandler handler = Message;
+            handler?.Invoke(this, e);
+        }
+
+        private void LogMessage(string message = "")
+        {
+            LogMessageEventArgs ea = new LogMessageEventArgs();
+            ea.LogMessage = message;
+            OnLogMessage(ea);
+        }
+        #endregion
         /// <summary>
         /// Run one or more unit tests
         /// </summary>
         /// <param name="s8d">Existing S8Dissasembler object</param>
         /// <param name="unitTestFile">The name of the file containing the unit tests</param>
         /// <returns></returns>
-        public int RunUnitTest(S8Dissasembler s8d,string unitTestFile)
+        public UInt16 RunUnitTest(S8Dissasembler s8d,string unitTestFile)
         {
             byte[] bInput;
             int lineCounter = 0;
             int errCnt = 0;
-            int currentaddress = 0;
+            UInt16 currentaddress = 0;
             bool verbose = false;
 
             if (s8d is null) return 0;
 
             if (!File.Exists(unitTestFile))
             {
-                Console.WriteLine("Unknown file " + unitTestFile);
+                LogMessage("Unknown file " + unitTestFile);
                 return 0;
             }
 
             var allLines = File.ReadAllLines(unitTestFile);
 
-            Console.WriteLine("Read unit test file " + allLines.Length + " lines.");
+            LogMessage("Read unit test file " + allLines.Length + " lines.");
 
             foreach (string currentLine in allLines)
             {
@@ -45,7 +64,7 @@ namespace S8Debugger
 
                 if (actualLine[0] == '#')
                 {
-                    Console.WriteLine(actualLine);
+                    LogMessage(actualLine);
                     continue;
                 }
 
@@ -79,16 +98,16 @@ namespace S8Debugger
                             if (int.TryParse(param, out newTicks))
                             {
                                 s8d.SetMaxTicks(newTicks);
-                                Console.WriteLine("[" + lineCounter.ToString() + "] MAXTICKS " + newTicks);
+                                LogMessage("[" + lineCounter.ToString() + "] MAXTICKS " + newTicks);
                             }
 
                             break;
                         case "LOAD":
-                            Console.WriteLine("[" + lineCounter.ToString() + "] LOAD FILE " + param);
+                            LogMessage("[" + lineCounter.ToString() + "] LOAD FILE " + param);
                             s8d.Init(param);
                             break;
                         default:
-                            Console.WriteLine("[" + lineCounter.ToString() + "] Unknown command " + command);
+                            LogMessage("[" + lineCounter.ToString() + "] Unknown command " + command);
                             break;
                     }
 
@@ -98,7 +117,7 @@ namespace S8Debugger
                 var input = actualLine.Split(";");
                 if (input.Length < 2)
                 {
-                    Console.WriteLine("[" + lineCounter.ToString() + "] Invalid line format");
+                    LogMessage("[" + lineCounter.ToString() + "] Invalid line format");
                     continue;
                 }
                 input[0] = input[0].Trim();
@@ -109,10 +128,10 @@ namespace S8Debugger
 
                 if (hexInputLen > 1000)
                 {
-                    Console.WriteLine("FAILED: Input length > 1000");
+                    LogMessage("FAILED: Input length > 1000");
                     return 0;
                 }
-                Console.WriteLine("[" + lineCounter.ToString() + "] Run started");
+                LogMessage("[" + lineCounter.ToString() + "] Run started");
 
                 bInput = new byte[hexInputLen];
 
@@ -130,21 +149,21 @@ namespace S8Debugger
 
                 if (input[1].Equals(stdout))
                 {
-                    Console.WriteLine("[" + lineCounter.ToString() + "] Run successfull");
+                    LogMessage("[" + lineCounter.ToString() + "] Run successfull");
                 }
                 else
                 {
                     errCnt++;
-                    Console.WriteLine("[" + lineCounter.ToString() + "] FAILED! Output differs");
-                    Console.WriteLine("[" + lineCounter.ToString() + "]   OUTPUT   = " + stdout);
-                    Console.WriteLine("[" + lineCounter.ToString() + "]   EXPECTED = " + input[1]);
+                    LogMessage("[" + lineCounter.ToString() + "] FAILED! Output differs");
+                    LogMessage("[" + lineCounter.ToString() + "]   OUTPUT   = " + stdout);
+                    LogMessage("[" + lineCounter.ToString() + "]   EXPECTED = " + input[1]);
                     //return 0;
                 }
             }
 
             if (errCnt > 0)
             {
-                Console.WriteLine("Unit test failed with " + errCnt + " errors!");
+                LogMessage("Unit test failed with " + errCnt + " errors!");
             }
             return currentaddress;
         }

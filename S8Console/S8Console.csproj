@@ -3,8 +3,10 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net5.0</TargetFramework>
-    <RootNamespace>S8Debugger</RootNamespace>
-    <AssemblyName>S8Debugger</AssemblyName>
   </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\S8Engine\S8Engine.csproj" />
+  </ItemGroup>
 
 </Project>
