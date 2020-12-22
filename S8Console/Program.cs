@@ -5,6 +5,7 @@ namespace S8Console
 {
     class Program
     {
+        static bool disable_logging = false;
 
         static void Main(string[] args)
         {
@@ -59,7 +60,9 @@ namespace S8Console
                     case "GUI":
                         
                         var s8gui = new S8Gui(parser);
+                        disable_logging = true;
                         s8gui.RunGui(null);
+                        disable_logging = false;
 
                         Console.Clear();
                         Console.BackgroundColor = ConsoleColor.Black;
@@ -87,7 +90,8 @@ namespace S8Console
 
         private static void Parser_Message(object sender, LogMessageEventArgs e)
         {
-            Console.WriteLine(e.LogMessage);
+            if(!disable_logging)
+                Console.WriteLine(e.LogMessage);
         }
 
         static void PrintHelp()
