@@ -22,4 +22,4 @@ Installer .NET5 herifra https://dotnet.microsoft.com/download/dotnet/5.0
 
 Deretter cloner du (eller laster ned Git repo)
 
-Og så kjører du kommando "dotnet run" inne i mappen som dette Git repo er lastet ned til.
+Og så kjører du kommando "dotnet run" inne i undermappen .\S8Console som dette Git repo er lastet ned til.
