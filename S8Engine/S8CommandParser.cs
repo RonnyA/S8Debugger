@@ -362,8 +362,8 @@ namespace S8Debugger
             LogMessage("ASM! sledefil         - Assemble, dont load into memory");
             LogMessage("");
 
-
-            LogMessage("Q = Quit");
+            LogMessage("GUI - Enter GUI mode");
+            LogMessage("Q   - Quit");
         }
 
         #endregion Helper Functions

@@ -38,7 +38,7 @@ namespace S8Debugger
         public UInt16 pc = 0;
         public bool flag = false;
         public byte[] regs = new byte[16];
-        public byte[] memory = null;
+        public byte[] memory = new byte[4096];
         public UInt16 memoryUsed = 0;
 
 

@@ -2,12 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
-using System.Net.Http;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Xml.Serialization;
+
 
 namespace S8Debugger
 {
@@ -39,7 +34,7 @@ namespace S8Debugger
 
         #endregion
         byte[] bytes = new byte[4096];
-        S8CPU cpu;
+        public S8CPU cpu;
 
         /// <summary>
         /// Ctor
@@ -76,6 +71,14 @@ namespace S8Debugger
             if (bytes is null) return false;
             LogMessage("Loaded image " + cpu.state.memoryUsed + " bytes");
             return true;
+        }
+
+        public MemoryStream MemoryDump()
+        {
+            MemoryStream ms = new MemoryStream(bytes);
+            
+            //ms.Write(bytes, 0, bytes.Length);
+            return ms;
         }
 
         public UInt16 MemoryDump(UInt16 start, UInt16 length, bool showAddress = false, bool allowOutsideLoadedMemory = false)
@@ -162,6 +165,46 @@ namespace S8Debugger
         {
             cpu.ResetRegs();
         }
+        
+        public List<string>DissasembleToList(UInt16 start, UInt16 length, bool showAddress = false, bool allowOutsideLoadedMemory = false)
+        {
+            List<string> asms = new List<string>();
+            S8Instruction s8i;
+
+            UInt16 currentAddress = start;
+            UInt16 endAddress = (UInt16)(currentAddress + length);
+
+            // Special - if no length givien, assume 20 instructions
+            if (length == 0)
+            {
+                endAddress = (UInt16)(currentAddress + 20);
+                //endAddress = cpu.state.memoryUsed;
+            }
+            if (!allowOutsideLoadedMemory)
+            {
+                if (endAddress > cpu.state.memoryUsed)
+                {
+                    endAddress = cpu.state.memoryUsed;
+                }
+            }
+
+            while (currentAddress < endAddress)
+            {
+                int lineAddress = currentAddress;
+
+                byte opcode = bytes[currentAddress++];
+                byte param = bytes[currentAddress++];
+
+                s8i = new S8Instruction(opcode, param);
+                s8i.DecodeInstruction();
+
+                asms.Add(s8i.Instruction2Text(lineAddress, showAddress));
+
+            }
+
+            return asms;
+        }
+
 
         public UInt16 Dissasemble(UInt16 start, UInt16 length, bool showAddress = false, bool allowOutsideLoadedMemory = false)
         {

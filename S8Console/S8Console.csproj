@@ -6,6 +6,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Terminal.Gui" Version="0.90.3" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\S8Engine\S8Engine.csproj" />
   </ItemGroup>
 
