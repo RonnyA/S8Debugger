@@ -9,6 +9,9 @@ namespace S8Console
         static void Main(string[] args)
         {
 
+            Console.BackgroundColor = ConsoleColor.Black;
+            Console.ForegroundColor = ConsoleColor.Green;
+
             string defaultS8File = @"s8.s8";
 
             S8CommandParser parser = new S8CommandParser();
@@ -19,6 +22,10 @@ namespace S8Console
 
             Console.WriteLine("Velkommen til Slede8 debugger");
             Console.WriteLine("H => HELP");
+            Console.WriteLine("");
+
+            Console.WriteLine("Enter command 'GUI' to enter GUI mode");
+            Console.WriteLine("");
 
             bool debugging = true;            
 
@@ -44,7 +51,20 @@ namespace S8Console
                     case "DIE":
                         debugging = false;
                         break;
-                   
+                        
+                    case "CLS":
+                        Console.Clear();
+                        break;
+
+                    case "GUI":
+                        
+                        var s8gui = new S8Gui(parser);
+                        s8gui.RunGui(null);
+
+                        Console.Clear();
+                        Console.BackgroundColor = ConsoleColor.Black;
+                        Console.ForegroundColor = ConsoleColor.Green;
+                        break;
                     default:
                         parser.ParseCommand(input);
                         break;
