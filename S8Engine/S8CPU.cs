@@ -10,21 +10,22 @@ namespace S8Debugger
 {
     public class CpuStack
     {
+        
         int RECURSION_LIMIT = 100;
 
 
-        Stack<int> stack = new Stack<int>();
+        Stack<UInt16> stack = new Stack<UInt16>();
 
-        public bool Push(int pc)
+        public bool Push(UInt16 pc)
         {
             if (stack.Count > RECURSION_LIMIT) return false;
             stack.Push(pc);
 
             return true;
         }
-        public int Pop()
+        public UInt16 Pop()
         {
-            if (stack.Count == 0) return -1;
+            if (stack.Count == 0) return 0xFFFF;
             return stack.Pop();
         }
 
@@ -34,11 +35,11 @@ namespace S8Debugger
     {
         public int inputPtr = 0;
         public int tick = 0;
-        public int pc = 0;
+        public UInt16 pc = 0;
         public bool flag = false;
         public byte[] regs = new byte[16];
         public byte[] memory = null;
-        public int memoryUsed = 0;
+        public UInt16 memoryUsed = 0;
 
 
         public bool crashed;
@@ -50,6 +51,26 @@ namespace S8Debugger
 
     public class S8CPU
     {
+
+        #region Eventing
+
+        public delegate void LogMessageEventHandler(Object sender, LogMessageEventArgs e);
+
+        public event LogMessageEventHandler Message;
+        protected virtual void OnLogMessage(LogMessageEventArgs e)
+        {
+            LogMessageEventHandler handler = Message;
+            handler?.Invoke(this, e);
+        }
+
+        private void LogMessage(string message = "")
+        {
+            LogMessageEventArgs ea = new LogMessageEventArgs();
+            ea.LogMessage = message;
+            OnLogMessage(ea);
+        }
+        #endregion
+
         int DEFAULT_MAX_STEPS = 50000; //Default allow 50.000 ticks
 
         public CpuState state;
@@ -103,20 +124,20 @@ namespace S8Debugger
 
             if (executable.Length > 4096)
             {
-                Console.WriteLine(ERROR_MESSAGE[(int)ERROR_MESSAGE_ID.fileSizeTooBig]);
+                LogMessage(ERROR_MESSAGE[(int)ERROR_MESSAGE_ID.fileSizeTooBig]);
                 return null;
             }
 
             if (!validateMagic(executable))
             {
-                Console.WriteLine(ERROR_MESSAGE[(int)ERROR_MESSAGE_ID.unsupportedExecutable]);
+                LogMessage(ERROR_MESSAGE[(int)ERROR_MESSAGE_ID.unsupportedExecutable]);
                 return null;
             }
 
             state.memory = new byte[4096];
             int seek = 7;
 
-            int i = 0;
+            UInt16 i = 0;
             while (seek < executable.Length)
             {
                 state.memory[i++] = executable[seek++];
@@ -178,7 +199,7 @@ namespace S8Debugger
 
             if (state.memoryUsed == 0)
             {
-                Console.WriteLine("No s8 program loaded");
+                LogMessage("No s8 program loaded");
                 return false;
             }
 
@@ -189,7 +210,7 @@ namespace S8Debugger
                 if (++state.tick > state.maxTicks)
                 {
                     var strErr = ERROR_MESSAGE[(int)ERROR_MESSAGE_ID.resourcesExhausted].Replace("${maxTicks}", state.tick.ToString());
-                    Console.WriteLine(strErr);
+                    LogMessage(strErr);
                     return false;
                 }
 
@@ -251,7 +272,7 @@ namespace S8Debugger
                 else if (instr.operation == 1) state.memory[addr] = (byte)state.regs[instr.argument1];
                 else
                 {
-                    Console.WriteLine(ERROR_MESSAGE[(int)ERROR_MESSAGE_ID.segmentationFault]);
+                    LogMessage(ERROR_MESSAGE[(int)ERROR_MESSAGE_ID.segmentationFault]);
                     return false;
                 }
             }
@@ -274,7 +295,7 @@ namespace S8Debugger
                     state.regs[instr.argument1] = (byte)((reg1 - reg2) & 0xff);
                 else
                 {
-                    Console.WriteLine(ERROR_MESSAGE[(int)ERROR_MESSAGE_ID.segmentationFault]);
+                    LogMessage(ERROR_MESSAGE[(int)ERROR_MESSAGE_ID.segmentationFault]);
                     return false;
                 }
             }
@@ -291,7 +312,7 @@ namespace S8Debugger
                     }
                     else
                     {
-                        Console.WriteLine(ERROR_MESSAGE[(int)ERROR_MESSAGE_ID.readAfterEndOfInput]);
+                        LogMessage(ERROR_MESSAGE[(int)ERROR_MESSAGE_ID.readAfterEndOfInput]);
                         return false;
                     }
                 }
@@ -304,7 +325,7 @@ namespace S8Debugger
                 }
                 else
                 {
-                    Console.WriteLine(ERROR_MESSAGE[(int)ERROR_MESSAGE_ID.segmentationFault]);
+                    LogMessage(ERROR_MESSAGE[(int)ERROR_MESSAGE_ID.segmentationFault]);
                     return false;
                 }
             }
@@ -322,7 +343,7 @@ namespace S8Debugger
                 else if (instr.operation == 0x5) state.flag = reg1 >= reg2;
                 else
                 {
-                    Console.WriteLine(ERROR_MESSAGE[(int)ERROR_MESSAGE_ID.segmentationFault]);
+                    LogMessage(ERROR_MESSAGE[(int)ERROR_MESSAGE_ID.segmentationFault]);
                     return false;
                 }
             }
@@ -345,7 +366,7 @@ namespace S8Debugger
 
                 if (!stack.Push(state.pc))
                 {
-                    Console.WriteLine(ERROR_MESSAGE[(int)ERROR_MESSAGE_ID.recursionLimitExceeded]);
+                    LogMessage(ERROR_MESSAGE[(int)ERROR_MESSAGE_ID.recursionLimitExceeded]);
                     return false;
                 }
                 state.pc = instr.address;
@@ -358,14 +379,14 @@ namespace S8Debugger
                 if (state.pc < 0)
                 {
                     state.pc = 0;
-                    Console.WriteLine(ERROR_MESSAGE[(int)ERROR_MESSAGE_ID.segmentationFault]);
+                    LogMessage(ERROR_MESSAGE[(int)ERROR_MESSAGE_ID.segmentationFault]);
                     return false;
                 }
             }
             else if (instr.operationClass == 0xc) return true;
             else
             {
-                Console.WriteLine(ERROR_MESSAGE[(int)ERROR_MESSAGE_ID.segmentationFault]);
+                LogMessage(ERROR_MESSAGE[(int)ERROR_MESSAGE_ID.segmentationFault]);
                 return false;
             }
 
@@ -376,9 +397,9 @@ namespace S8Debugger
         private void VerboseLogLine(S8Instruction instr, bool showaddress)
         {
             var regs = GetChangedRegs();
-            if (!string.IsNullOrEmpty(regs)) Console.WriteLine(regs);
+            if (!string.IsNullOrEmpty(regs)) LogMessage(regs);
             instr.DecodeInstruction();
-            Console.WriteLine(instr.Instruction2Text(state.pc - 2, showaddress));
+            LogMessage(instr.Instruction2Text(state.pc - 2, showaddress));
             prevRegs = (byte[])state.regs.Clone();
         }
 

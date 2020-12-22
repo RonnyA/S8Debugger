@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <TargetFramework>net5.0</TargetFramework>
+    <RootNamespace>S8Debugger</RootNamespace>
+    <AssemblyName>S8Debugger</AssemblyName>
+    <Authors>Ronny Hansen</Authors>
+    <Company />
+    <Product>S8Engine</Product>
+    <Description>Library for assembling SLEDE to S8, and for dissasembling and running S8 code</Description>
+    <PackageId>S8Engine</PackageId>
+    <Copyright>Ronny Hansen</Copyright>
+    <PackageLicenseFile>LICENSE</PackageLicenseFile>
+    <PackageProjectUrl>https://github.com/RonnyA/S8Debugger</PackageProjectUrl>
+    <RepositoryUrl></RepositoryUrl>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\LICENSE">
+      <Pack>True</Pack>
+      <PackagePath></PackagePath>
+    </None>
+  </ItemGroup>
+
+</Project>

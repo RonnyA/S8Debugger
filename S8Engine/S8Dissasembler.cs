@@ -13,8 +13,47 @@ namespace S8Debugger
 {
     public class S8Dissasembler
     {
+
+        #region Eventing
+
+        public delegate void LogMessageEventHandler(Object sender, LogMessageEventArgs e);
+
+        public event LogMessageEventHandler Message;
+        protected virtual void OnLogMessage(LogMessageEventArgs e)
+        {
+            LogMessageEventHandler handler = Message;
+            handler?.Invoke(this, e);
+        }
+
+        private void LogMessage(string message = "")
+        {
+            LogMessageEventArgs ea = new LogMessageEventArgs();
+            ea.LogMessage = message;
+            LogMessage(ea);
+        }
+
+        private void LogMessage(LogMessageEventArgs ea)
+        {                        
+            OnLogMessage(ea);
+        }
+
+        #endregion
         byte[] bytes = new byte[4096];
-        S8CPU cpu = new S8CPU();
+        S8CPU cpu;
+
+        /// <summary>
+        /// Ctor
+        /// </summary>
+        public S8Dissasembler()
+        {
+            cpu = new S8CPU();
+            cpu.Message += Cpu_Message;
+        }
+
+        private void Cpu_Message(object sender, LogMessageEventArgs e)
+        {
+            LogMessage(e);  
+        }
 
         public bool Init(string fname)
         {
@@ -26,7 +65,7 @@ namespace S8Debugger
 
             if (bytes is null) return false;
 
-            Console.WriteLine("Loaded image " + cpu.state.memoryUsed + " bytes");
+            LogMessage("Loaded image " + cpu.state.memoryUsed + " bytes");
             return true;
         }
 
@@ -35,19 +74,19 @@ namespace S8Debugger
             bytes = cpu.Load(s8prog);
 
             if (bytes is null) return false;
-            Console.WriteLine("Loaded image " + cpu.state.memoryUsed + " bytes");
+            LogMessage("Loaded image " + cpu.state.memoryUsed + " bytes");
             return true;
         }
 
-        public int MemoryDump(int start, int length, bool showAddress = false, bool allowOutsideLoadedMemory = false)
+        public UInt16 MemoryDump(UInt16 start, UInt16 length, bool showAddress = false, bool allowOutsideLoadedMemory = false)
         {
-            int currentAddress = start;
-            int endAddress = currentAddress + length;
+            UInt16 currentAddress = start;
+            UInt16 endAddress = (UInt16) (currentAddress + length);
 
-            // Special - if no length givien, assume 8 instructions
+            // Special - if no length givien, assume 40 bytes (4 lines)
             if (length == 0)
             {
-                endAddress = currentAddress + 8;
+                endAddress = (UInt16)(currentAddress + 40);
                 //endAddress = cpu.state.memoryUsed;
             }
 
@@ -72,7 +111,7 @@ namespace S8Debugger
                 if (lineCounter == 0)
                 {
                     string sHexAddress = currentAddress.ToString("X3");
-                    Console.WriteLine("m" + sHexAddress + ":");
+                    LogMessage("m" + sHexAddress + ":");
                     line1 = ".DATA ";
                     line2 = ";" + currentAddress.ToString("X3") + ":  ";
                 }
@@ -104,15 +143,15 @@ namespace S8Debugger
 
                 if ((lineCounter++ > 8) | (currentAddress >= endAddress))
                 {
-                    Console.WriteLine(line1);
-                    Console.WriteLine(line2);
+                    LogMessage(line1);
+                    LogMessage(line2);
 
                     lineCounter = 0;
-                    Console.WriteLine();
+                    LogMessage();
                 }
             }
 
-            Console.WriteLine();
+            LogMessage();
 
             return currentAddress;
         }
@@ -124,17 +163,17 @@ namespace S8Debugger
             cpu.ResetRegs();
         }
 
-        public int Dissasemble(int start, int length, bool showAddress = false, bool allowOutsideLoadedMemory = false)
+        public UInt16 Dissasemble(UInt16 start, UInt16 length, bool showAddress = false, bool allowOutsideLoadedMemory = false)
         {
             S8Instruction s8i;
 
-            int currentAddress = start;
-            int endAddress = currentAddress + length;
+            UInt16 currentAddress = start;
+            UInt16 endAddress = (UInt16)(currentAddress + length);
 
-            // Special - if no length givien, assume 8 instructions
+            // Special - if no length givien, assume 20 instructions
             if (length == 0)
             {
-                endAddress = currentAddress + 8;
+                endAddress = (UInt16)(currentAddress + 20);
                 //endAddress = cpu.state.memoryUsed;
             }
             if (!allowOutsideLoadedMemory)
@@ -152,11 +191,11 @@ namespace S8Debugger
                 byte opcode = bytes[currentAddress++];
                 byte param = bytes[currentAddress++];
 
-                s8i = new S8Instruction(opcode, param);                
+                s8i = new S8Instruction(opcode, param);                                
                 s8i.DecodeInstruction();
 
 
-                Console.WriteLine(s8i.Instruction2Text(lineAddress, showAddress));
+                LogMessage(s8i.Instruction2Text(lineAddress, showAddress));
 
 
             }
@@ -172,12 +211,12 @@ namespace S8Debugger
             if (s8i.ValidInstruction)
             {
                 if (!showAddress)
-                    Console.WriteLine("a" + sHexAddress + ":");
+                    LogMessage("a" + sHexAddress + ":");
             }
             else
             {
                 if (!showAddress)
-                    Console.WriteLine("m" + sHexAddress + ":");
+                    LogMessage("m" + sHexAddress + ":");
             }
 
             if (showAddress)
@@ -190,17 +229,17 @@ namespace S8Debugger
 
             if (s8i.ValidInstruction)
             {
-                Console.WriteLine(s8i.DecodedInstruction);
+                LogMessage(s8i.DecodedInstruction);
             }
             else
             {
                 string data = ".DATA 0x" + s8i.Opcode.ToString("X2");
-                Console.WriteLine(data + " ; " + s8i.ErrorMessage);
+                LogMessage(data + " ; " + s8i.ErrorMessage);
             }
         }
         */
 
-        internal int SetPC(int start, bool allowOutsideLoadedMemory = false)
+        internal UInt16 SetPC(UInt16 start, bool allowOutsideLoadedMemory = false)
         {
             if (start > 0xFFF)
                 start = 0;
@@ -254,7 +293,7 @@ namespace S8Debugger
 
 
    
-        public int Run(bool ShowOppgulp = true, bool verbose = false, bool showaddress=false)
+        public UInt16 Run(bool ShowOppgulp = true, bool verbose = false, bool showaddress=false)
         {
             var stopwatch = new Stopwatch();
             stopwatch.Start();
@@ -264,7 +303,7 @@ namespace S8Debugger
             stopwatch.Stop();
             var elapsed_time = stopwatch.ElapsedMilliseconds;
 
-            Console.WriteLine("Elapsed time " + elapsed_time + "ms, Ticks " + cpu.state.tick);
+            LogMessage("Elapsed time " + elapsed_time + "ms, Ticks " + cpu.state.tick);
             if (ShowOppgulp)
                 Oppgulp();
             return cpu.state.pc;
@@ -278,7 +317,7 @@ namespace S8Debugger
             return cpu.state.pc;
         }
 
-        public int Step(int numStep)
+        public UInt16 Step(int numStep)
         {
             do
             {
@@ -326,10 +365,10 @@ namespace S8Debugger
         {
             if (cpu.state.stdout.Length > 0)
             {
-                Console.WriteLine(">HEX: " + cpu.state.stdout);
+                LogMessage(">HEX: " + cpu.state.stdout);
 
 
-                Console.WriteLine(">ASCII: " + ConvertHex2Asii(cpu.state.stdout));
+                LogMessage(">ASCII: " + ConvertHex2Asii(cpu.state.stdout));
 
 
                 cpu.state.stdout = "";
@@ -339,13 +378,13 @@ namespace S8Debugger
 
         public void Regs()
         {
-            Console.WriteLine("PC [" + cpu.state.pc.ToString("X3") + "]");
-            Console.WriteLine("FLAG [" + cpu.state.flag + "]");
+            LogMessage("PC [" + cpu.state.pc.ToString("X3") + "]");
+            LogMessage("FLAG [" + cpu.state.flag + "]");
             for (int i = 0; i < 16; i++)
             {
                 Console.Write("R" + i + "[" + cpu.state.regs[i].ToString("X2") + "] ");
             }
-            Console.WriteLine();
+            LogMessage();
         }
     }
 }

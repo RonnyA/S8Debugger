@@ -16,12 +16,12 @@ namespace S8Debugger
         public byte Param; 
 
         // decoded fields from opcode + param
-        public int operationClass;
-        public int operation;
-        public int address;
-        public int value;
-        public int argument1;
-        public int argument2;
+        public UInt16 operationClass;
+        public UInt16 operation;
+        public UInt16 address;
+        public UInt16 value;
+        public UInt16 argument1;
+        public UInt16 argument2;
 
         public string DecodedInstruction;
         public bool ValidInstruction;
@@ -39,14 +39,14 @@ namespace S8Debugger
             Param = param;
 
 
-            int instruction = opcode | (param << 8);
+            UInt16 instruction = (UInt16) (opcode | (param << 8));
 
-            operationClass = instruction & 0xf;
-            operation = (instruction >> 4) & 0xf;
-            address = instruction >> 4;
-            value = instruction >> 8;
-            argument1 = (instruction >> 8) & 0xf;
-            argument2 = (instruction >> 12) & 0xf;
+            operationClass = (UInt16)(instruction & 0xf);
+            operation = (UInt16)((instruction >> 4) & 0xf);
+            address = (UInt16)(instruction >> 4);
+            value = (UInt16)(instruction >> 8);
+            argument1 = (UInt16)((instruction >> 8) & 0xf);
+            argument2 = (UInt16)((instruction >> 12) & 0xf);
         }
 
         public string DefaultDecodeError()
