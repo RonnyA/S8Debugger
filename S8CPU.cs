@@ -7,14 +7,14 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace S8Debugger
-{    
+{
     public class CpuStack
     {
         int RECURSION_LIMIT = 100;
-        
+
 
         Stack<int> stack = new Stack<int>();
-        
+
         public bool Push(int pc)
         {
             if (stack.Count > RECURSION_LIMIT) return false;
@@ -75,21 +75,21 @@ namespace S8Debugger
             state = new CpuState();
             stack = new CpuStack();
 
-            SetMaxTicks(DEFAULT_MAX_STEPS); 
+            SetMaxTicks(DEFAULT_MAX_STEPS);
         }
 
 
         public void SetMaxTicks(int Ticks)
         {
             state.maxTicks = Ticks;
-            
+
         }
 
         //const memory = load(executable);
         //let stdout = new Uint8Array();
         //const backtrace: number[] = [];
 
-        public byte[] Load(byte[] executable, bool skipMagicHeader)
+        public byte[] Load(byte[] executable)
         {
             int oldMaxTicks = DEFAULT_MAX_STEPS;
             if (state is not null)
@@ -107,21 +107,14 @@ namespace S8Debugger
                 return null;
             }
 
-            if (!skipMagicHeader)
-            { 
-                if (!validateMagic(executable))
-                {
-                    Console.WriteLine(ERROR_MESSAGE[(int)ERROR_MESSAGE_ID.unsupportedExecutable]);
-                    return null;
-                }
+            if (!validateMagic(executable))
+            {
+                Console.WriteLine(ERROR_MESSAGE[(int)ERROR_MESSAGE_ID.unsupportedExecutable]);
+                return null;
             }
 
             state.memory = new byte[4096];
             int seek = 7;
-            if (skipMagicHeader)
-            {
-                seek = 0;
-            }
 
             int i = 0;
             while (seek < executable.Length)
@@ -174,13 +167,13 @@ namespace S8Debugger
             state.stdout = "";
         }
 
-        public void Run(bool verbose = false,bool showaddress=false)        
+        public void Run(bool verbose = false, bool showaddress = false)
         {
             ResetRegs();
             RunUntil(state.memoryUsed, verbose, showaddress);
         }
 
-        internal bool RunUntil(int stop_pc_at, bool verbose = false, bool showaddress=false)
+        internal bool RunUntil(int stop_pc_at, bool verbose = false, bool showaddress = false)
         {
 
             if (state.memoryUsed == 0)
@@ -195,7 +188,7 @@ namespace S8Debugger
             {
                 if (++state.tick > state.maxTicks)
                 {
-                    var strErr  = ERROR_MESSAGE[(int)ERROR_MESSAGE_ID.resourcesExhausted].Replace("${maxTicks}", state.tick.ToString());
+                    var strErr = ERROR_MESSAGE[(int)ERROR_MESSAGE_ID.resourcesExhausted].Replace("${maxTicks}", state.tick.ToString());
                     Console.WriteLine(strErr);
                     return false;
                 }
@@ -210,27 +203,27 @@ namespace S8Debugger
 
                 if (!ExecuteInstruction(s8, verbose, showaddress))
                 {
-                    state.crashed = true;                    
+                    state.crashed = true;
                 }
-                
+
             }
 
             if (state.crashed) return false;
             return true;
         }
 
-        public bool Step(int steps=1)
+        public bool Step(int steps = 1)
         {
             state.crashed = false;
 
-            return RunUntil(state.pc+ (steps*2));
+            return RunUntil(state.pc + (steps * 2));
         }
 
 
-        public bool ExecuteInstruction(S8Instruction instr, bool verbose = false, bool showaddress=false)
+        public bool ExecuteInstruction(S8Instruction instr, bool verbose = false, bool showaddress = false)
         {
             if (verbose) VerboseLogLine(instr, showaddress);
-             // HALT
+            // HALT
             if (instr.operationClass == 0x0) return false;
 
             // SET
@@ -384,8 +377,8 @@ namespace S8Debugger
         {
             var regs = GetChangedRegs();
             if (!string.IsNullOrEmpty(regs)) Console.WriteLine(regs);
-            instr.DecodeInstruction();            
-            Console.WriteLine(instr.Instruction2Text(state.pc-2, showaddress));
+            instr.DecodeInstruction();
+            Console.WriteLine(instr.Instruction2Text(state.pc - 2, showaddress));
             prevRegs = (byte[])state.regs.Clone();
         }
 
@@ -399,7 +392,6 @@ namespace S8Debugger
             }
             return changed;
         }
-        
+
     }
 }
-   

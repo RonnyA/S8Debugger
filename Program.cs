@@ -60,10 +60,33 @@ namespace S8Debugger
                     switch (cmd[0].ToUpper())
                     {
 
+                        case "A": // ASssemble statement
+                            if (cmd.Length > 1)
+                            {
+                                var result = AsmStatement(input.Substring(2));
+
+                                Console.WriteLine($"A return {result.Length} bytes");
+                                Console.Write(" >");
+
+                                foreach(byte b in result)
+                                {
+                                    Console.Write($"0x{b:X2} ");
+                                }
+                                Console.WriteLine();
+                            }
+                            break;
+
                         case "ASM!": //Assemble file (for validation only)
                             if (cmd.Length > 1)
                             {
-                                var s8prog = Asm(cmd[1]);
+                                string asmFile = cmd[1];
+                                string s8File = "";
+                                if (cmd.Length>2)
+                                {
+                                    s8File = cmd[2];
+                                }
+
+                                var s8prog = AsmFile(asmFile, s8File);
                                 if (s8prog is null)
                                 {
                                     Console.WriteLine("Assembly FAILED!!");
@@ -79,7 +102,16 @@ namespace S8Debugger
                         case "ASM": //Assemble and LOAD file to memory
                             if (cmd.Length > 1)
                             {
-                                var s8prog = Asm(cmd[1]);
+
+                                string asmFile = cmd[1];
+                                string s8File = "";
+                                if (cmd.Length > 2)
+                                {
+                                    s8File = cmd[2];
+                                }
+
+                                var s8prog = AsmFile(asmFile, s8File);
+
                                 if (s8prog is null)
                                 {
                                     Console.WriteLine("Assembly FAILED!!");
@@ -87,14 +119,7 @@ namespace S8Debugger
                                 else
                                 {
                                     s8d = new S8Dissasembler();
-                                    s8d.InitFromMemory(s8prog);
-
-
-                                    if (cmd.Length > 2)
-                                    {
-                                        SaveToS8File(s8prog, cmd[2]);
-                                        Console.WriteLine("Saved assembled S8 to " + cmd[2]);
-                                    }
+                                    s8d.InitFromMemory(s8prog);                                    
                                 };
                             }
                             break;
@@ -117,24 +142,6 @@ namespace S8Debugger
                                     Console.WriteLine("Unknown S8 file " + cmd[1]);
                                 }
 
-                            }
-                            break;
-                        case "FORCELOAD":
-                            if (cmd.Length > 1)
-                            {
-                                if (File.Exists(cmd[1]))
-                                {
-                                    s8d = new S8Dissasembler();
-                                    if (!s8d.Init(cmd[1], true))
-                                    {
-                                        Console.WriteLine("Failed to load image");
-                                    }
-                                    currentAddress = 0;
-                                }
-                                else
-                                {
-                                    Console.WriteLine("Unknown file " + cmd[1]);
-                                }
                             }
                             break;
 
@@ -255,10 +262,10 @@ namespace S8Debugger
                             break;
                     }
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
 
-                    Console.WriteLine("Den skled unna!");
+                    Console.WriteLine("Sleden kræsjet: " +ex.ToString());
                 }
 
             }
@@ -278,7 +285,7 @@ namespace S8Debugger
 
         }
 
-        private static byte[] Asm(string sledeFile)
+        private static byte[] AsmFile(string sledeFile, string s8file="")
         {
 
             if (!File.Exists(sledeFile))
@@ -286,8 +293,14 @@ namespace S8Debugger
                 Console.WriteLine("Can't find SLEDE8 file " + sledeFile);
             }
             S8Assembler s8 = new S8Assembler();
+            return s8.AssembleFile(sledeFile, s8file);
+        }
 
-            return s8.AssembleFile(sledeFile);
+        private static byte[] AsmStatement(string statement)
+        {
+
+            S8Assembler s8 = new S8Assembler();
+            return s8.AssembleStatement(statement);
         }
 
         static int parseValue(string v)
@@ -321,10 +334,9 @@ namespace S8Debugger
             Console.WriteLine("D!- Dissassemble [start] [length]");
             Console.WriteLine("M!- Memory Dump  [start] [length]");
             Console.WriteLine("Enables access to memory ourside loaded image"); ;
-            Console.WriteLine();
-
             Console.WriteLine("");
 
+            Console.WriteLine("");
             Console.WriteLine("INPUT - SET INPUT hexhexhex");
             Console.WriteLine("PC    - SET pc = xxx");
             Console.WriteLine("RUN   - Run program from 0");
@@ -336,6 +348,14 @@ namespace S8Debugger
             Console.WriteLine("UNITTEST [filename] - Run unit tests agains [filename]");
             Console.WriteLine("! = Change showaddress flag");
             Console.WriteLine("");
+
+
+            Console.WriteLine("");
+            Console.WriteLine("A    statement        - Assemble [statement]");
+            Console.WriteLine("ASM  sledefil [s8fil] - Assemble and load into memory. Optionally save to S8 file");
+            Console.WriteLine("ASM! sledefil         - Assemble, dont load into memory");
+            Console.WriteLine("");
+
 
             Console.WriteLine("Q = Quit");
         }

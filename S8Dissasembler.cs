@@ -16,13 +16,13 @@ namespace S8Debugger
         byte[] bytes = new byte[4096];
         S8CPU cpu = new S8CPU();
 
-        public bool Init(string fname, bool force = false)
+        public bool Init(string fname)
         {
 
             if (!File.Exists(fname)) return false;
 
             var executable = File.ReadAllBytes(fname);
-            bytes = cpu.Load(executable, force);
+            bytes = cpu.Load(executable);
 
             if (bytes is null) return false;
 
@@ -32,7 +32,7 @@ namespace S8Debugger
 
         internal bool InitFromMemory(byte[] s8prog)
         {
-            bytes = cpu.Load(s8prog, true);
+            bytes = cpu.Load(s8prog);
 
             if (bytes is null) return false;
             Console.WriteLine("Loaded image " + cpu.state.memoryUsed + " bytes");
