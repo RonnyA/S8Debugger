@@ -1,11 +1,12 @@
 ﻿using System;
+using S8Console.GUI;
 using S8Debugger;
 
 namespace S8Console
 {
     class Program
     {
-        static bool disable_logging = false;
+        static bool disableConsoleLogging = false;
 
         static void Main(string[] args)
         {
@@ -16,7 +17,7 @@ namespace S8Console
             string defaultS8File = @"s8.s8";
 
             S8CommandParser parser = new S8CommandParser();
-            parser.Message += Parser_Message;
+            parser.MessageHandler += Parser_Message;
 
             parser.s8d.Init(defaultS8File);
 
@@ -60,9 +61,9 @@ namespace S8Console
                     case "GUI":
                         
                         var s8gui = new S8Gui(parser);
-                        disable_logging = true;
+                        disableConsoleLogging = true;
                         s8gui.RunGui(null);
-                        disable_logging = false;
+                        disableConsoleLogging = false;
 
                         Console.Clear();
                         Console.BackgroundColor = ConsoleColor.Black;
@@ -90,7 +91,7 @@ namespace S8Console
 
         private static void Parser_Message(object sender, LogMessageEventArgs e)
         {
-            if(!disable_logging)
+            if(!disableConsoleLogging)
                 Console.WriteLine(e.LogMessage);
         }
 

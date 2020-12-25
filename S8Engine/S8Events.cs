@@ -16,5 +16,15 @@ namespace S8Debugger
             LogTimeStamp = DateTime.Now;
         }
 
-    }   
+
+        
+    }
+    
+    public class CpuStepInfo : EventArgs
+    {
+        //yield { pc, flag, regs, memory, stdout, inputPtr };
+
+        public UInt16 pc { get; set; }
+
+    }
 }

@@ -12,7 +12,7 @@ using Terminal.Gui;
 //
 // Good intro read: https://itnext.io/terminal-console-user-interface-in-net-core-4e978f1225b
 
-namespace S8Console
+namespace S8Console.GUI
 {
     public class S8Gui
     {
@@ -23,10 +23,7 @@ namespace S8Console
         // public GUI variables to allow for access to internal variables from events and other places
         static HexView hexLinesView;
         static TextField commandMessage;
-
-        // List variables for ASM and REGS
-        static private readonly List<string> _asms = new List<string>();
-        static private readonly List<string> _regs = new List<string>();
+        static AsmView asmLinesView;
 
         // List variable for log
         static private readonly List<string> _log = new List<string>();
@@ -55,22 +52,8 @@ namespace S8Console
         /// <summary>
         /// Update dissasm and hex view after a new file has been loaded
         /// </summary>
-        static void UpdateAll()
+        static void UpdateAsmAndHex()
         {
-            _asms.Clear();
-            _asms.AddRange(s8parser.s8d.DissasembleToList(0, 0xFFF, s8parser.showAddress, false));
-
-
-            // ToDo - find a way to update from Cpu.CpuState
-            // Add eventing when code runs
-            _regs.Clear();
-            _regs.Add($"PC   [000]");
-            _regs.Add("FLAG [FALSE]");
-            for (int i = 0; i < 16; i++)
-            {
-                _regs.Add($"R{i}   [00]");
-            }
-
             // Todo:  Even if you set AllowEdits to false you can change the variables in the UI, but it doesnt update the source data.
             hexLinesView.AllowEdits = false;
 
@@ -79,6 +62,7 @@ namespace S8Console
 
             hexLinesView.Source = s8parser.s8d.MemoryDump();
 
+            asmLinesView.refreshUI(0);
         }
 
 
@@ -88,8 +72,8 @@ namespace S8Console
             Console.OutputEncoding = System.Text.Encoding.Default;
 
             //Connect to event handler for messaging
-            s8parser.Message += S8parser_Message;
-
+            s8parser.MessageHandler += S8parser_Message;
+            s8parser.s8d.cpu.CpuStepHandler += Cpu_CpuStepHandler;
             // Start MainApp
             MainApp();
 
@@ -101,9 +85,21 @@ namespace S8Console
             Application.Shutdown();
 
             // Disconnect from Message events (clean up and be nice)
-            s8parser.Message -= S8parser_Message;
+            s8parser.s8d.cpu.CpuStepHandler -= Cpu_CpuStepHandler;
+            s8parser.MessageHandler -= S8parser_Message;
         }
 
+
+        /// <summary>
+        /// This event is fired after every program execution line
+        /// Use this to update UI
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void Cpu_CpuStepHandler(object sender, CpuStepInfo e)
+        {
+            
+        }
 
         static void MainApp()
         {
@@ -143,12 +139,12 @@ namespace S8Console
             var asmFrameView = new FrameView("ASM")
             {
                 X = 0,
-                Y = 1,
+                Y = 0,
                 Width = Dim.Percent(75),
                 Height = Dim.Percent(60),
             };
 
-            var asmLinesView = new ListView(_asms)
+            asmLinesView = new AsmView(s8parser)
             {
                 X = 0,
                 Y = 0,
@@ -183,31 +179,63 @@ namespace S8Console
             #endregion Main ASM window
 
 
-            #region Register windows
-            var regFrameView = new FrameView("Regs")
+            #region Debug Controller
+
+            var frmDebugController = new DebugController(s8parser)
             {
                 X = Pos.Right(asmFrameView),
-                Y = 1,
+                Y = 0,
                 Width = Dim.Fill(),
-                Height = Dim.Fill()
+                Height = 5
             };
-            var regList = new ListView(_regs)
+
+            win.Add(frmDebugController);
+
+            #endregion Debug Controlelr
+
+            #region Register windows
+
+            var regFrameView = new RegsView(s8parser.s8d.cpu)
             {
+                X = Pos.Right(asmFrameView),
+                Y = Pos.Bottom(frmDebugController),
                 Width = Dim.Fill(),
-                Height = Dim.Fill()
+                Height = 15
+                //Height = Dim.Fill()
             };
-            regFrameView.Add(regList);
+
             win.Add(regFrameView);
             #endregion Register windows
 
-            #region CommandWindow
+            #region Output view
+
+            var outFrameView = new FrameView("Output")
+            {
+                X = Pos.Right(asmFrameView),
+                Y = Pos.Bottom(regFrameView),
+                Width = Dim.Fill(),
+                Height = Dim.Fill()
+            };
+
+            var outHexView = new OutputView(s8parser.s8d.cpu)
+            {
+                X = 0,
+                Y = 0,
+                Width = Dim.Fill(),
+                Height = Dim.Fill(),
+            };
+            outFrameView.Add(outHexView);
+            win.Add(outFrameView);
+            #endregion Output view
+
+            #region regOutputView
             var commandFrameView = new FrameView("Debug commands")
             {
                 X = 0,
                 Y = Pos.Bottom(hexFrameView),
                 Width = asmFrameView.Width,
                 //Height = Dim.Fill()
-                Height = 4
+                Height = 3
             };
 
             commandMessage = new TextField("")
@@ -234,6 +262,7 @@ namespace S8Console
             #endregion CommandWindow
 
 
+          
 
 
 #if _mouse_debug_
@@ -246,11 +275,13 @@ namespace S8Console
             win.Add(ml);
 
 #endif
+
+
             top.Add(win, menu);
             top.Add(menu);
 
 
-            UpdateAll();
+            UpdateAsmAndHex();
 
             Application.Run();
 
@@ -263,7 +294,7 @@ namespace S8Console
             s8parser.ParseCommand(cmd);
             commandMessage.Text = "";
 
-            UpdateAll();
+            UpdateAsmAndHex();
         }
 
         static void ShowHex()
@@ -360,11 +391,11 @@ namespace S8Console
                 if ((currentFileName.Contains(".asm")) | (currentFileName.Contains(".slede8")))
                 {
                     s8parser.ParseCommand("ASM " + currentFileName);
-                    UpdateAll();
+                    UpdateAsmAndHex();
                 }
                 else if (s8parser.s8d.Init(currentFileName))
                 {
-                    UpdateAll();
+                    UpdateAsmAndHex();
 
                     //MessageBox.Query(50, 7, "Loaded file", d.FilePath, "Ok");                    
                 }

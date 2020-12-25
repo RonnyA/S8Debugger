@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection.Metadata.Ecma335;
 using System.Runtime.Intrinsics.X86;
@@ -45,21 +46,20 @@ namespace S8Debugger
         public bool crashed;
 
         public byte[] stdin = new byte[1];
-        public string stdout = "";
+        public MemoryStream outputStream = new MemoryStream();
         public int maxTicks;
     };
 
     public class S8CPU
     {
 
-        #region Eventing
-
+        #region LogEventing
         public delegate void LogMessageEventHandler(Object sender, LogMessageEventArgs e);
 
-        public event LogMessageEventHandler Message;
+        public event LogMessageEventHandler MessageHandler;
         protected virtual void OnLogMessage(LogMessageEventArgs e)
         {
-            LogMessageEventHandler handler = Message;
+            LogMessageEventHandler handler = MessageHandler;
             handler?.Invoke(this, e);
         }
 
@@ -69,7 +69,27 @@ namespace S8Debugger
             ea.LogMessage = message;
             OnLogMessage(ea);
         }
-        #endregion
+        #endregion LogEventing
+
+
+        #region CpuStepInfo
+        public delegate void CpuStepInfoEventHandler(Object sender, CpuStepInfo e);
+
+        public event CpuStepInfoEventHandler CpuStepHandler;
+        protected virtual void OnCpuStepInfo(CpuStepInfo e)
+        {
+            CpuStepInfoEventHandler handler = CpuStepHandler;
+            handler?.Invoke(this, e);
+        }
+
+        private void CpuStepInfo(UInt16 pc)
+        {
+            CpuStepInfo csi = new CpuStepInfo();
+            csi.pc = pc;
+            OnCpuStepInfo(csi);
+        }
+        #endregion LogEventing
+
 
         int DEFAULT_MAX_STEPS = 50000; //Default allow 50.000 ticks
 
@@ -185,17 +205,36 @@ namespace S8Debugger
             }
 
 
-            state.stdout = "";
+            state.outputStream = new MemoryStream();
+
+            // After each step in the CPU tell anyone listening to events about the step. Used to update UI
+            CpuStepInfo(state.pc);
+
         }
 
         public void Run(bool verbose = false, bool showaddress = false)
         {
             ResetRegs();
-            RunUntil(state.memoryUsed, verbose, showaddress);
+            RunSteps(0, verbose, showaddress);
         }
 
-        internal bool RunUntil(int stop_pc_at, bool verbose = false, bool showaddress = false)
+        /// <summary>
+        /// Run the code "runSteps" number of cpu steps. 
+        /// </summary>
+        /// <param name="runSteps">Number of CPU steps to run. 0 means no limit, runs until STOPP or crash</param>        
+        /// <param name="verbose"></param>
+        /// <param name="showaddress"></param>
+        /// <returns></returns>
+        internal bool RunSteps(int runSteps, bool verbose = false, bool showaddress = false)
         {
+
+            int stepsLeft = 1;// Default 1 step left
+
+            if (runSteps >0)
+            {
+                stepsLeft = runSteps;
+            }
+            
 
             if (state.memoryUsed == 0)
             {
@@ -205,8 +244,15 @@ namespace S8Debugger
 
             if (state.memoryUsed == 0) return false;
 
-            while ((state.pc < stop_pc_at) && (!state.crashed))
+            while ((stepsLeft>0) && (!state.crashed))
             {
+                // if there is a limit of how many steps we can run, reduce the steps left
+                if (runSteps>0)
+                {
+                    stepsLeft--;
+                }
+
+
                 if (++state.tick > state.maxTicks)
                 {
                     var strErr = ERROR_MESSAGE[(int)ERROR_MESSAGE_ID.resourcesExhausted].Replace("${maxTicks}", state.tick.ToString());
@@ -220,12 +266,19 @@ namespace S8Debugger
                 //yield { pc, flag, regs, memory, stdout, inputPtr };
 
                 S8Instruction s8 = new S8Instruction(opcode, param);
-                state.pc += 2;
+
+                if (s8.operationClass != 0x00) // 0x00 = STOP                    
+                {  
+                    state.pc += 2;
+                }
 
                 if (!ExecuteInstruction(s8, verbose, showaddress))
                 {
                     state.crashed = true;
                 }
+
+                // After each step in the CPU tell anyone listening to events about the step. Used to update UI
+                CpuStepInfo(state.pc);
 
             }
 
@@ -234,10 +287,8 @@ namespace S8Debugger
         }
 
         public bool Step(int steps = 1)
-        {
-            state.crashed = false;
-
-            return RunUntil(state.pc + (steps * 2));
+        {            
+            return RunSteps(steps);
         }
 
 
@@ -320,8 +371,17 @@ namespace S8Debugger
                 // WRITE
                 else if (instr.operation == 0x1)
                 {
+                    if (state.outputStream.Length > 1000)
+                    {
+                        LogMessage(ERROR_MESSAGE[(int)ERROR_MESSAGE_ID.segmentationFault]);
+                        return false;
+                    }
+
                     byte val = state.regs[instr.argument1];
-                    state.stdout += val.ToString("X2");
+                    //state.stdout += val.ToString("X2");
+
+                    state.outputStream.Seek(0, SeekOrigin.End);
+                    state.outputStream.WriteByte(val);
                 }
                 else
                 {

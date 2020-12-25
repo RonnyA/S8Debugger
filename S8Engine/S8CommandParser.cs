@@ -21,10 +21,10 @@ namespace S8Debugger
 
         public delegate void LogMessageEventHandler(Object sender, LogMessageEventArgs e);
 
-        public event LogMessageEventHandler Message;
+        public event LogMessageEventHandler MessageHandler;
         protected virtual void OnLogMessage(LogMessageEventArgs e)
         {
-            LogMessageEventHandler handler = Message;
+            LogMessageEventHandler handler = MessageHandler;
             handler?.Invoke(this, e);
         }
 
@@ -50,7 +50,8 @@ namespace S8Debugger
         {
             // create helper components and hook up event handlers
             s8d = new S8Dissasembler();
-            s8d.Message += HandleEventMessage;
+            s8d.MessageHandler += HandleEventMessage;
+
 
             s8a = new S8Assembler();
             s8a.Message += HandleEventMessage;
@@ -62,8 +63,6 @@ namespace S8Debugger
             currentAddress = 0;
             showAddress = true; //default is to show memory and instruction memory address
         }
-
-
 
         private void HandleEventMessage(object sender, LogMessageEventArgs e)
         {
@@ -149,8 +148,8 @@ namespace S8Debugger
                             else
                             {
                                 LogMessage("Assembled file OK, size = " + s8prog.Length);
-                            }
-                            ;
+                            };
+                            currentAddress = s8d.cpu.state.pc;
                         }
                         break;
 
@@ -175,6 +174,9 @@ namespace S8Debugger
                                 //s8d = new S8Dissasembler();
                                 s8d.InitFromMemory(s8prog);
                             };
+
+                            currentAddress = s8d.cpu.state.pc;
+
                         }
                         break;
 
@@ -248,16 +250,14 @@ namespace S8Debugger
                     case "+":
                     case "S":
                     case "STEP":
-                        if (start > 0)
+                        int numSteps = 1;
+                        if (cmd.Length > 1)
                         {
-                            currentAddress = s8d.Step(start);
+                            numSteps = parseVal(cmd[1]);
                         }
-                        else
-                        {
-                            currentAddress = s8d.Step(1);
-                        }
-
+                        currentAddress = s8d.Step(numSteps);
                         break;
+
                     case "SETMAXTICKS":
                     case "TICKS":
                         if (start > 0)

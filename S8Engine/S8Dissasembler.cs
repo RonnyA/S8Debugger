@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-
+using System.Text;
 
 namespace S8Debugger
 {
@@ -13,10 +13,10 @@ namespace S8Debugger
 
         public delegate void LogMessageEventHandler(Object sender, LogMessageEventArgs e);
 
-        public event LogMessageEventHandler Message;
+        public event LogMessageEventHandler MessageHandler;
         protected virtual void OnLogMessage(LogMessageEventArgs e)
         {
-            LogMessageEventHandler handler = Message;
+            LogMessageEventHandler handler = MessageHandler;
             handler?.Invoke(this, e);
         }
 
@@ -42,10 +42,10 @@ namespace S8Debugger
         public S8Dissasembler()
         {
             cpu = new S8CPU();
-            cpu.Message += Cpu_Message;
+            cpu.MessageHandler += Cpu_MessageHandler;            
         }
 
-        private void Cpu_Message(object sender, LogMessageEventArgs e)
+        private void Cpu_MessageHandler(object sender, LogMessageEventArgs e)
         {
             LogMessage(e);  
         }
@@ -316,12 +316,11 @@ namespace S8Debugger
         }
         internal string GetOutput()
         {
-            return cpu.state.stdout;
-        }
+            //cpu.state.outputStream.Seek(0, SeekOrigin.Begin);
+            var stdout = Encoding.ASCII.GetString(cpu.state.outputStream.ToArray());
+            //cpu.state.outputStream.Seek(0, SeekOrigin.End);
 
-        internal void ClearOutput()
-        {
-            cpu.state.stdout = "";
+            return stdout;
         }
 
         public void SetMaxTicks(int Ticks)
@@ -351,22 +350,12 @@ namespace S8Debugger
                 Oppgulp();
             return cpu.state.pc;
         }
-
-
-        public int RunUntil(int pc)
-        {
-            cpu.RunUntil(pc);
-            Oppgulp();
-            return cpu.state.pc;
-        }
+        
 
         public UInt16 Step(int numStep)
         {
-            do
-            {
-                cpu.Step();
-                numStep--;
-            } while ((numStep > 0) & (!cpu.state.crashed));
+
+            cpu.Step(numStep);
 
             Oppgulp();
             Regs();
@@ -406,15 +395,26 @@ namespace S8Debugger
 
         private void Oppgulp()
         {
-            if (cpu.state.stdout.Length > 0)
+            if (cpu.state.outputStream.Length > 0)
             {
-                LogMessage(">HEX: " + cpu.state.stdout);
+
+                cpu.state.outputStream.Position = 0;
+
+                byte[] output = cpu.state.outputStream.ToArray();
+
+                string hexString = string.Empty;
+                for (int i=0;i<output.Length;i++)
+                {
+                    hexString += output[i].ToString("X2");
+                }
+                
+
+                LogMessage(">HEX: " + hexString);
+
+                LogMessage(">ASCII: " + Encoding.Default.GetString((output))); ;
 
 
-                LogMessage(">ASCII: " + ConvertHex2Asii(cpu.state.stdout));
-
-
-                cpu.state.stdout = "";
+                //ClearOutput(); Lets "RESET" to the clearing. Keep output growing if we are stepping
 
             }
         }
