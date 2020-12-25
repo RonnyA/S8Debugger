@@ -17,7 +17,7 @@ namespace S8Console.GUI
 
             int ypos=0;
 
-            var pcl = new Label(new Rect(1, ypos++, 20, 1),   "PC   [0x000]");
+            var pcl = new Label(new Rect(1, ypos++, 20, 1),   "PC   [000]");
             var flagl = new Label(new Rect(1, ypos++, 20, 1), "Flag [FALSE]");
             ypos++;
 
