@@ -39,8 +39,7 @@ namespace S8Debugger
             byte[] bInput;
             int lineCounter = 0;
             int errCnt = 0;
-            UInt16 currentaddress = 0;
-            bool verbose = false;
+            UInt16 currentaddress = 0;            
 
             if (s8d is null) return 0;
 
@@ -84,14 +83,19 @@ namespace S8Debugger
 
                     switch (command)
                     {
+
+                        case "TERSE":
+                            s8d.cpu.VerboseMode = false;
+                            break;
+
                         case "VERBOSE":
-                            verbose = true;
+                            s8d.cpu.VerboseMode = true;
                             if (param.Contains("FALSE"))
                             {
-                                verbose = false;
-                            }
-                            
+                                s8d.cpu.VerboseMode = false;
+                            }                            
                             break;
+
                         case "TICKS":
                         case "MAXTICKS":
                             int newTicks = 0;
@@ -144,7 +148,7 @@ namespace S8Debugger
 
                 s8d.SetInput(bInput);
 
-                currentaddress = s8d.Run(false, verbose);
+                currentaddress = s8d.Run();
                 string stdout = s8d.GetOutput();
 
                 if (input[1].Equals(stdout))

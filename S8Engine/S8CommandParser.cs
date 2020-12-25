@@ -1,5 +1,4 @@
 ﻿using System;
-using System;
 using System.IO;
 
 namespace S8Debugger
@@ -214,7 +213,11 @@ namespace S8Debugger
                         break;
 
                     case "PC": // set PC
-                        currentAddress = s8d.SetPC(start);
+                        if (cmd.Length > 1)
+                        {
+                            var newaddress = parseVal(cmd[1]);
+                            currentAddress = s8d.SetPC(newaddress);
+                        }
                         break;
 
                     case "PC!": // set PC
@@ -229,12 +232,20 @@ namespace S8Debugger
                         }
                         break;
 
+                    case "VERBOSE":
+                        s8d.cpu.VerboseMode = true;
+                        break;
+                    case "TERSE":
+                        s8d.cpu.VerboseMode = false;
+                        break;
+
                     case "R":
                     case "RUN":
-                        currentAddress = s8d.Run(true, false, showAddress);
+                        currentAddress = s8d.Run();
                         break;
                     case "RUNV":
-                        currentAddress = s8d.Run(true, true, showAddress);
+                        s8d.cpu.VerboseMode = true;
+                        currentAddress = s8d.Run();
                         break;
 
                     case "REGS":
@@ -317,7 +328,7 @@ namespace S8Debugger
             try
             {
 
-                if (valStr.StartsWith("0x"))
+                if ((valStr.StartsWith("0x")) | (valStr.StartsWith("0X")))
                 {
                     return int.Parse(valStr.Substring(2), System.Globalization.NumberStyles.HexNumber);
                 }
@@ -345,13 +356,16 @@ namespace S8Debugger
             LogMessage("");
             LogMessage("INPUT - SET INPUT hexhexhex");
             LogMessage("PC    - SET pc = xxx");
-            LogMessage("RUN   - Run program from 0");
-            LogMessage("RUNV  - Run program from 0 with verbose output");
+            LogMessage("RUN   - Run program from 0");            
             LogMessage("REGS  - Dump registers");
             LogMessage("RESET - Reset registers");
             LogMessage("STEP  - Step PC [steps]");
             LogMessage("TICKS - Set Max Ticks 0xNN");
             LogMessage("UNITTEST [filename] - Run unit tests agains [filename]");
+            LogMessage("");
+
+            LogMessage("VERBOSE = Set Verbose output of RUN and STEP");
+            LogMessage("TERSE   = Remove verbose output of RUN and STEP");
             LogMessage("! = Change showaddress flag");
             LogMessage("");
 

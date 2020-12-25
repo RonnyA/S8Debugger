@@ -501,7 +501,7 @@ namespace S8Debugger
 
         UInt16 parseVal(string valStr)
         {
-            if (valStr.StartsWith("0x"))
+            if ( (valStr.StartsWith("0x")) | (valStr.StartsWith("0X")))
             {
                 return (UInt16)int.Parse(valStr.Substring(2), System.Globalization.NumberStyles.HexNumber);
             }

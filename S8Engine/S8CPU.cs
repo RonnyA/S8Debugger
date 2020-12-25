@@ -90,7 +90,7 @@ namespace S8Debugger
         }
         #endregion LogEventing
 
-
+        public bool VerboseMode {get; set;}
         int DEFAULT_MAX_STEPS = 50000; //Default allow 50.000 ticks
 
         public CpuState state;
@@ -212,10 +212,10 @@ namespace S8Debugger
 
         }
 
-        public void Run(bool verbose = false, bool showaddress = false)
+        public void Run()
         {
             ResetRegs();
-            RunSteps(0, verbose, showaddress);
+            RunSteps(0);
         }
 
         /// <summary>
@@ -225,7 +225,7 @@ namespace S8Debugger
         /// <param name="verbose"></param>
         /// <param name="showaddress"></param>
         /// <returns></returns>
-        internal bool RunSteps(int runSteps, bool verbose = false, bool showaddress = false)
+        internal bool RunSteps(int runSteps)
         {
 
             int stepsLeft = 1;// Default 1 step left
@@ -267,12 +267,7 @@ namespace S8Debugger
 
                 S8Instruction s8 = new S8Instruction(opcode, param);
 
-                if (s8.operationClass != 0x00) // 0x00 = STOP                    
-                {  
-                    state.pc += 2;
-                }
-
-                if (!ExecuteInstruction(s8, verbose, showaddress))
+                if (!ExecuteInstruction(s8))
                 {
                     state.crashed = true;
                 }
@@ -292,15 +287,19 @@ namespace S8Debugger
         }
 
 
-        public bool ExecuteInstruction(S8Instruction instr, bool verbose = false, bool showaddress = false)
-        {
-            if (verbose) VerboseLogLine(instr, showaddress);
-            // HALT
+        public bool ExecuteInstruction(S8Instruction instr)
+        {            
+            LogInstructionToDebugger(instr);
+
+            // STOPP
             if (instr.operationClass == 0x0) return false;
 
-            // SET
+            // increase counter if we do anything else than STOPP
+            state.pc += 2;
 
-            else if (instr.operationClass == 0x1)
+
+            // SETT
+            if (instr.operationClass == 0x1)
             {
                 state.regs[instr.operation] = (byte)instr.value;
             }
@@ -443,24 +442,31 @@ namespace S8Debugger
                     return false;
                 }
             }
-            else if (instr.operationClass == 0xc) return true;
+            else if (instr.operationClass == 0xc)
+            {
+                // No Op.. Do nothing
+            }
             else
             {
                 LogMessage(ERROR_MESSAGE[(int)ERROR_MESSAGE_ID.segmentationFault]);
                 return false;
             }
 
+
             return true;
         }
 
         public byte[] prevRegs = new byte[16];
-        private void VerboseLogLine(S8Instruction instr, bool showaddress)
+        private void LogInstructionToDebugger(S8Instruction instr)
         {
-            var regs = GetChangedRegs();
-            if (!string.IsNullOrEmpty(regs)) LogMessage(regs);
-            instr.DecodeInstruction();
-            LogMessage(instr.Instruction2Text(state.pc - 2, showaddress));
-            prevRegs = (byte[])state.regs.Clone();
+            if (VerboseMode)
+            {
+                var regs = GetChangedRegs();
+                if (!string.IsNullOrEmpty(regs)) LogMessage(regs);
+                instr.DecodeInstruction();
+                LogMessage(instr.Instruction2Text(state.pc, true));
+                prevRegs = (byte[])state.regs.Clone();
+            }
         }
 
         private string GetChangedRegs()

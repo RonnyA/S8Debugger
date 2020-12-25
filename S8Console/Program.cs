@@ -91,8 +91,12 @@ namespace S8Console
 
         private static void Parser_Message(object sender, LogMessageEventArgs e)
         {
-            if(!disableConsoleLogging)
+            if (!disableConsoleLogging)
+            {
+                Console.ForegroundColor = ConsoleColor.White;
                 Console.WriteLine(e.LogMessage);
+                Console.ForegroundColor = ConsoleColor.Green;
+            }
         }
 
         static void PrintHelp()

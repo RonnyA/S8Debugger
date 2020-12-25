@@ -28,7 +28,7 @@ namespace S8Debugger
         }
 
         private void LogMessage(LogMessageEventArgs ea)
-        {                        
+        {
             OnLogMessage(ea);
         }
 
@@ -42,12 +42,12 @@ namespace S8Debugger
         public S8Dissasembler()
         {
             cpu = new S8CPU();
-            cpu.MessageHandler += Cpu_MessageHandler;            
+            cpu.MessageHandler += Cpu_MessageHandler;
         }
 
         private void Cpu_MessageHandler(object sender, LogMessageEventArgs e)
         {
-            LogMessage(e);  
+            LogMessage(e);
         }
 
         public bool Init(string fname)
@@ -76,7 +76,7 @@ namespace S8Debugger
         public MemoryStream MemoryDump()
         {
             MemoryStream ms = new MemoryStream(bytes);
-            
+
             //ms.Write(bytes, 0, bytes.Length);
             return ms;
         }
@@ -84,7 +84,7 @@ namespace S8Debugger
         public UInt16 MemoryDump(UInt16 start, UInt16 length, bool showAddress = false, bool allowOutsideLoadedMemory = false)
         {
             UInt16 currentAddress = start;
-            UInt16 endAddress = (UInt16) (currentAddress + length);
+            UInt16 endAddress = (UInt16)(currentAddress + length);
 
             // Special - if no length givien, assume 40 bytes (4 lines)
             if (length == 0)
@@ -99,6 +99,12 @@ namespace S8Debugger
                 {
                     endAddress = cpu.state.memoryUsed;
                 }
+            }
+
+            // Dont read outside physical memory
+            if (endAddress > bytes.Length)
+            {
+                endAddress = (UInt16)(bytes.Length - 1);
             }
 
 
@@ -165,8 +171,8 @@ namespace S8Debugger
         {
             cpu.ResetRegs();
         }
-        
-        public List<string>DissasembleToList(UInt16 start, UInt16 length, bool showAddress = false, bool allowOutsideLoadedMemory = false)
+
+        public List<string> DissasembleToList(UInt16 start, UInt16 length, bool showAddress = false, bool allowOutsideLoadedMemory = false)
         {
             List<string> asms = new List<string>();
             S8Instruction s8i;
@@ -187,6 +193,13 @@ namespace S8Debugger
                     endAddress = cpu.state.memoryUsed;
                 }
             }
+
+            // Dont read outside physical memory
+            if (endAddress > bytes.Length)
+            {
+                endAddress = (UInt16)(bytes.Length - 1);
+            }
+
 
             while (currentAddress < endAddress)
             {
@@ -219,6 +232,7 @@ namespace S8Debugger
                 endAddress = (UInt16)(currentAddress + 20);
                 //endAddress = cpu.state.memoryUsed;
             }
+
             if (!allowOutsideLoadedMemory)
             {
                 if (endAddress > cpu.state.memoryUsed)
@@ -227,6 +241,13 @@ namespace S8Debugger
                 }
             }
 
+            // Dont read outside physical memory
+            if (endAddress > bytes.Length)
+            {
+                endAddress = (UInt16)(bytes.Length - 1);
+            }
+
+
             while (currentAddress < endAddress)
             {
                 int lineAddress = currentAddress;
@@ -234,7 +255,7 @@ namespace S8Debugger
                 byte opcode = bytes[currentAddress++];
                 byte param = bytes[currentAddress++];
 
-                s8i = new S8Instruction(opcode, param);                                
+                s8i = new S8Instruction(opcode, param);
                 s8i.DecodeInstruction();
 
 
@@ -246,52 +267,21 @@ namespace S8Debugger
 
         }
 
-        /*
-        internal void PrettyPrintInstruction(S8Instruction s8i, int currentAddress,bool showAddress)
-        {
-            string sHexAddress = currentAddress.ToString("X3");
-
-            if (s8i.ValidInstruction)
-            {
-                if (!showAddress)
-                    LogMessage("a" + sHexAddress + ":");
-            }
-            else
-            {
-                if (!showAddress)
-                    LogMessage("m" + sHexAddress + ":");
-            }
-
-            if (showAddress)
-            {
-                string sOpcode = s8i.Opcode.ToString("X2");
-                string sParam = s8i.Param.ToString("X2");
-                Console.Write("A[" + sHexAddress + "] | I[" + sOpcode + " " + sParam + "] ");
-            }
-
-
-            if (s8i.ValidInstruction)
-            {
-                LogMessage(s8i.DecodedInstruction);
-            }
-            else
-            {
-                string data = ".DATA 0x" + s8i.Opcode.ToString("X2");
-                LogMessage(data + " ; " + s8i.ErrorMessage);
-            }
-        }
-        */
 
         internal UInt16 SetPC(UInt16 start, bool allowOutsideLoadedMemory = false)
         {
             if (start > 0xFFF)
-                start = 0;
+            {
+                LogMessage($"Can't set PC outside MAX memory. Max memory = 0x{cpu.state.memory.Length:X3}");
+                return cpu.state.pc;
+            }
 
             if (!allowOutsideLoadedMemory)
             {
                 if (start > cpu.state.memoryUsed)
                 {
-                    start = 0;
+                    LogMessage($"Can't set PC outside loaded memory. MemoryUsed = 0x{cpu.state.memoryUsed:X3}");
+                    return cpu.state.pc;
                 }
             }
             cpu.state.pc = start;
@@ -334,28 +324,28 @@ namespace S8Debugger
         }
 
 
-   
-        public UInt16 Run(bool ShowOppgulp = true, bool verbose = false, bool showaddress=false)
+
+        public UInt16 Run()
         {
             var stopwatch = new Stopwatch();
             stopwatch.Start();
 
-            cpu.Run(verbose, showaddress);
+            cpu.Run();
 
             stopwatch.Stop();
             var elapsed_time = stopwatch.ElapsedMilliseconds;
 
             LogMessage("Elapsed time " + elapsed_time + "ms, Ticks " + cpu.state.tick);
-            if (ShowOppgulp)
-                Oppgulp();
+
+            Oppgulp();
             return cpu.state.pc;
         }
-        
+
 
         public UInt16 Step(int numStep)
         {
 
-            cpu.Step(numStep);
+            cpu.Step(numStep);            
 
             Oppgulp();
             Regs();
@@ -397,36 +387,32 @@ namespace S8Debugger
         {
             if (cpu.state.outputStream.Length > 0)
             {
-
                 cpu.state.outputStream.Position = 0;
-
                 byte[] output = cpu.state.outputStream.ToArray();
 
                 string hexString = string.Empty;
-                for (int i=0;i<output.Length;i++)
+                for (int i = 0; i < output.Length; i++)
                 {
                     hexString += output[i].ToString("X2");
                 }
-                
 
                 LogMessage(">HEX: " + hexString);
-
                 LogMessage(">ASCII: " + Encoding.Default.GetString((output))); ;
-
-
-                //ClearOutput(); Lets "RESET" to the clearing. Keep output growing if we are stepping
-
             }
         }
 
         public void Regs()
         {
+            string regs = string.Empty;
+
             LogMessage("PC [" + cpu.state.pc.ToString("X3") + "]");
             LogMessage("FLAG [" + cpu.state.flag + "]");
             for (int i = 0; i < 16; i++)
             {
-                Console.Write("R" + i + "[" + cpu.state.regs[i].ToString("X2") + "] ");
+                regs += "R" + i + "[" + cpu.state.regs[i].ToString("X2") + "] ";
             }
+
+            LogMessage(regs);
             LogMessage();
         }
     }
