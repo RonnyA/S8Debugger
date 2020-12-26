@@ -75,7 +75,8 @@ namespace S8Debugger
         };
 
         public class Instruction
-        {
+        {            
+            public int LineNo;
             public string opCode;
             public List<string> args = new List<string>();
 
@@ -83,13 +84,13 @@ namespace S8Debugger
             internal void ensureNoArgs()
             {
                 if (args.Count > 0)
-                    throw new S8AssemblerException(ERROR_MESSAGE[(int)ERROR_MESSAGE_ID.expectedNoArguments].Replace("{extra}", $"{this.opCode} ${this.args}"));
+                    throw new S8AssemblerException(ERROR_MESSAGE[(int)ERROR_MESSAGE_ID.expectedNoArguments].Replace("{extra}", $"{this.opCode} ${this.args}"), LineNo);
             }
 
             internal string singleArg()
             {
                 if (args.Count != 1)
-                    throw new S8AssemblerException(ERROR_MESSAGE[(int)ERROR_MESSAGE_ID.expectedOneArgument].Replace("{extra}", $"{this.opCode} ${this.args}"));
+                    throw new S8AssemblerException(ERROR_MESSAGE[(int)ERROR_MESSAGE_ID.expectedOneArgument].Replace("{extra}", $"{this.opCode} ${this.args}"), LineNo);
 
                 return args[0];
             }
@@ -97,7 +98,7 @@ namespace S8Debugger
             internal string[] twoArguments()
             {
                 if (args.Count != 2)
-                    throw new S8AssemblerException(ERROR_MESSAGE[(int)ERROR_MESSAGE_ID.expectedTwoArguments].Replace("{extra}", $"{this.opCode} ${this.args}"));
+                    throw new S8AssemblerException(ERROR_MESSAGE[(int)ERROR_MESSAGE_ID.expectedTwoArguments].Replace("{extra}", $"{this.opCode} ${this.args}"), LineNo);
 
                 return args.ToArray();
             }
@@ -120,7 +121,7 @@ namespace S8Debugger
         /// </summary>
         /// <param name="sledeFile"></param>
         /// <returns>Compiled memory</returns>
-        public byte[] AssembleFile(string sledeFile, string s8file="")
+        public Target AssembleFile(string sledeFile, string s8file = "")
         {
             //if (s8file.Length == 0)
             //{
@@ -136,20 +137,28 @@ namespace S8Debugger
             }
 
             var sledeTekst = File.ReadAllText(sledeFile);
-            LogMessage($"Lest sledetekst fra {sledeFile}, {sledeTekst.Length} tegn");
-            LogMessage("Compilerere...");
+            LogMessage($"Reading SLEDE8 from {sledeFile}, {sledeTekst.Length} characters");
 
-            var result = assemble(sledeTekst);
-
-            LogMessage($"Compiled OK! {result.pdb.Length} instructions");
+            var result = AssembleSourceCode(sledeTekst);
 
             if (s8file.Length > 0)
             {
-                LogMessage($"Skriver S8 file {s8file}");
+                LogMessage($"Writing S8 file {s8file}, {result.exe.Length} bytes");
                 File.WriteAllBytes(s8file, result.exe);
+
+                //TODO: Write PDB info also?
             }
 
-            return result.exe;
+            return result;
+        }
+
+        public Target AssembleSourceCode(string sledeTekst)
+        {
+            LogMessage("Compiling.....");
+            var result = assemble(sledeTekst);
+            LogMessage($"Compiled OK! {result.pdb.Length} instructions");
+           
+            return result;
         }
 
         public enum ERROR_MESSAGE_ID { expectedNoArguments, expectedOneArgument, expectedTwoArguments, unexpectedToken, invalidRegistry, invalidData };
@@ -163,12 +172,17 @@ namespace S8Debugger
             "Ugyldig register: '{reg}'",
             "Ugyldig .DATA format: '{data}'"
         };
+        private ushort currentLine; // global variable - current source code line during compilation
 
         public byte[] AssembleStatement(string statement)
         {
+            currentLine = 0;
+
             var map = Preprosess(statement);
 
             var instr = tokenize(map.instructions[0].raw);
+            instr.LineNo = map.instructions[0].lineNumber;
+
             var bArray = Translate(instr, map.labels);
 
             return bArray;
@@ -376,7 +390,7 @@ namespace S8Debugger
                     break;
 
                 default:
-                    throw new S8AssemblerException(ERROR_MESSAGE[(int)ERROR_MESSAGE_ID.unexpectedToken].Replace("{token}", $"{instruction.opCode}"));                    
+                    throw new S8AssemblerException(ERROR_MESSAGE[(int)ERROR_MESSAGE_ID.unexpectedToken].Replace("{token}", $"{instruction.opCode}"), currentLine);                    
             }
 
             return Uint8Array(returnCode); // will never happen - just put here to make compiler silent
@@ -406,7 +420,7 @@ namespace S8Debugger
                         int endingPoint = data.IndexOf("'");
 
                         if (endingPoint < 1)
-                            throw new S8AssemblerException(ERROR_MESSAGE[(int)ERROR_MESSAGE_ID.invalidData].Replace("{data}", arg));
+                            throw new S8AssemblerException(ERROR_MESSAGE[(int)ERROR_MESSAGE_ID.invalidData].Replace("{data}", arg), currentLine);
                         data = data.Substring(0, endingPoint);
 
                         ms.Write(Encoding.ASCII.GetBytes(data));
@@ -435,7 +449,12 @@ namespace S8Debugger
                 // Then instructions
                 foreach (InstructionInfo instr in sourceMap.instructions)
                 {
+                    
+                    currentLine = instr.lineNumber; // Global variable used by execptions
+
                     var instruction = tokenize(instr.raw);
+                    instruction.LineNo = instr.lineNumber; // Used by exceptions inside Instruction
+
                     ms.Write(Translate(instruction, sourceMap.labels));
                 }
                 t.exe = ms.ToArray();
@@ -530,12 +549,12 @@ namespace S8Debugger
         byte getReg(string regStr)
         {
             if (!regStr.StartsWith('r')) 
-                throw new S8AssemblerException(ERROR_MESSAGE[(int)ERROR_MESSAGE_ID.invalidRegistry].Replace("{reg}", regStr));
+                throw new S8AssemblerException(ERROR_MESSAGE[(int)ERROR_MESSAGE_ID.invalidRegistry].Replace("{reg}", regStr), currentLine);
 
             byte regNum = (byte)parseVal(regStr.Substring(1));
 
             if (regNum< 0 || regNum> 15)
-                throw new S8AssemblerException(ERROR_MESSAGE[(int)ERROR_MESSAGE_ID.invalidRegistry].Replace("{reg}", regStr));
+                throw new S8AssemblerException(ERROR_MESSAGE[(int)ERROR_MESSAGE_ID.invalidRegistry].Replace("{reg}", regStr), currentLine);
 
             return regNum;
         }
@@ -666,8 +685,11 @@ namespace S8Debugger
 
     public class S8AssemblerException : SystemException
     {
+        public int SourceCodeLine { get; set; }
         public S8AssemblerException() : base() { }
-        public S8AssemblerException(string message) : base(message) { }
+        public S8AssemblerException(string message, int sourceLine) : base(message) {
+            SourceCodeLine = sourceLine;
+        }
     }
 
 

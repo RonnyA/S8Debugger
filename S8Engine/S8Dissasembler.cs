@@ -36,6 +36,8 @@ namespace S8Debugger
         byte[] bytes = new byte[4096];
         public S8CPU cpu;
 
+        public S8Assembler.DebugInfo[] PDB = null;
+
         /// <summary>
         /// Ctor
         /// </summary>
@@ -52,6 +54,7 @@ namespace S8Debugger
 
         public bool Init(string fname)
         {
+            PDB = null;
 
             if (!File.Exists(fname)) return false;
 
@@ -64,14 +67,42 @@ namespace S8Debugger
             return true;
         }
 
-        internal bool InitFromMemory(byte[] s8prog)
+        public bool InitFromMemory(S8Assembler.Target s8)
         {
+            PDB = s8.pdb;
+            return InitExeFromMemory(s8.exe);
+        }
+        public bool InitExeFromMemory(byte[] s8prog)
+        {            
             bytes = cpu.Load(s8prog);
 
             if (bytes is null) return false;
             LogMessage("Loaded image " + cpu.state.memoryUsed + " bytes");
             return true;
         }
+
+
+        /// <summary>
+        /// Map memory address (most often pc) to source code line.
+        /// This info is available in the PDB memory structure if we have it.
+        /// </summary>
+        /// <param name="pc"></param>
+        /// <returns></returns>
+        public UInt16 PDB_MapPC2SourceLine(UInt16 pc)
+        {
+            if (PDB is not null)
+            {
+                foreach (S8Assembler.DebugInfo dbg in PDB)
+                {
+                    if (dbg.address == pc)
+                    {
+                        return dbg.info.lineNumber;
+                    }
+                }
+            }
+            return 0;
+        }        
+
 
         public MemoryStream MemoryDump()
         {
@@ -289,29 +320,28 @@ namespace S8Debugger
             return cpu.state.pc;
         }
 
-        internal void SetInput(byte[] inputBuffer)
+        public void SetInput(byte[] inputBuffer)
         {
             cpu.state.stdin = inputBuffer;
+            cpu.state.inputPtr = 0;
         }
 
-        internal void SetInput(string v)
+        public void SetInputFromHexString(string v)
         {
-            string s = ConvertHex2Asii(v);
-
-            cpu.state.stdin = new byte[s.Length];
-            for (int i = 0; i < s.Length; i++)
-            {
-                cpu.state.stdin[i] = (byte)s[i];
-            }
+            cpu.state.stdin = ConvertHex2ByteArray(v);
+            cpu.state.inputPtr = 0;
         }
         internal string GetOutput()
         {
-            //cpu.state.outputStream.Seek(0, SeekOrigin.Begin);
-            var stdout = Encoding.ASCII.GetString(cpu.state.outputStream.ToArray());
-            //cpu.state.outputStream.Seek(0, SeekOrigin.End);
-
-            return stdout;
+            return Encoding.ASCII.GetString(cpu.state.outputStream.ToArray());
         }
+
+        // Show input as HEX string
+        public string GetInput()
+        {
+            return ConvertByteArray2HexString(cpu.state.stdin);
+        }
+
 
         public void SetMaxTicks(int Ticks)
         {
@@ -345,31 +375,41 @@ namespace S8Debugger
         public UInt16 Step(int numStep)
         {
 
-            cpu.Step(numStep);            
+            cpu.Step(numStep);
 
             Oppgulp();
             Regs();
             return cpu.state.pc;
         }
 
+        private string ConvertByteArray2HexString(byte[] bArray)
+        {
+            string hexString = string.Empty;
+            for (int i = 0; i < bArray.Length; i++)
+            {
+                hexString += bArray[i].ToString("X2");
+            }
+            return hexString;
 
-        private string ConvertHex2Asii(string hex)
+        }
+
+        private byte[] ConvertHex2ByteArray(string hex)
         {
             int i = 0;
-            int value = 0;
+            byte value = 0;
             string prefixedHex;
 
-            string returnText = "";
+            MemoryStream ms = new MemoryStream();
 
             try
             {
                 while (i < hex.Length)
                 {
                     prefixedHex = "0x" + hex[i] + hex[i + 1];
-                    value = Convert.ToInt32(prefixedHex, 16);
+                    value = (byte)Convert.ToInt32(prefixedHex, 16);
                     i = i + 2;
 
-                    returnText += (char)value;
+                    ms.WriteByte(value);
                 }
             }
             catch (Exception)
@@ -378,7 +418,7 @@ namespace S8Debugger
                 //
             }
 
-            return returnText;
+            return ms.ToArray();
 
         }
 
@@ -388,16 +428,12 @@ namespace S8Debugger
             if (cpu.state.outputStream.Length > 0)
             {
                 cpu.state.outputStream.Position = 0;
-                byte[] output = cpu.state.outputStream.ToArray();
 
-                string hexString = string.Empty;
-                for (int i = 0; i < output.Length; i++)
-                {
-                    hexString += output[i].ToString("X2");
-                }
+                var output = cpu.state.outputStream.ToArray();
 
-                LogMessage(">HEX: " + hexString);
-                LogMessage(">ASCII: " + Encoding.Default.GetString((output))); ;
+
+                LogMessage(">HEX   : " + ConvertByteArray2HexString(output));
+                LogMessage(">ASCII : " + Encoding.ASCII.GetString(output));
             }
         }
 

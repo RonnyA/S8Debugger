@@ -23,7 +23,11 @@ namespace S8Console.GUI
         // public GUI variables to allow for access to internal variables from events and other places
         static HexView hexLinesView;
         static TextField commandMessage;
+        static TextField inputField;
+        static FrameView asmFrameView;
         static AsmView asmLinesView;
+        static FrameView srcFrameView;
+        static SourceView srcLinesView;
 
         // List variable for log
         static private readonly List<string> _log = new List<string>();
@@ -62,9 +66,47 @@ namespace S8Console.GUI
 
             hexLinesView.Source = s8parser.s8d.MemoryDump();
 
+            inputField.Text = s8parser.s8d.GetInput();
             asmLinesView.refreshUI(0);
         }
 
+        static private void SelectSourceWindow()
+        {
+            string src = s8parser.GetSourceCode();
+            if (string.IsNullOrEmpty(src))
+            {
+                SetViewAsm();
+            }
+            else
+            {
+                SetViewSource();
+            }
+        }
+
+        static void SetViewSource()
+        {
+            asmFrameView.Visible = false;
+            asmFrameView.CanFocus = false;
+
+
+            srcFrameView.Visible = true;
+
+            srcFrameView.CanFocus = true;
+            srcLinesView.CanFocus = true;
+
+            srcLinesView.SetFocus();
+        }
+
+        static void SetViewAsm()
+        {
+            srcFrameView.Visible = false;
+            srcFrameView.CanFocus = false;
+
+            asmFrameView.Visible = true;
+            asmFrameView.CanFocus = true;
+
+            asmFrameView.SetFocus();
+        }
 
 
         public void RunGui(string[] args)
@@ -98,7 +140,7 @@ namespace S8Console.GUI
         /// <param name="e"></param>
         private void Cpu_CpuStepHandler(object sender, CpuStepInfo e)
         {
-            
+
         }
 
         static void MainApp()
@@ -107,7 +149,7 @@ namespace S8Console.GUI
             var top = Application.Top;
 
 
-            var win = new Window("S8 Debugger")
+            var win = new Window("SLEDE8")
             {
                 X = 0,
                 Y = 1, // Leave one row for the toplevel menu
@@ -121,27 +163,94 @@ namespace S8Console.GUI
                 new MenuBarItem("_File", new MenuItem[]{
                     //new MenuItem ("_New", "Creates new file", NewFile),
                     new MenuItem("_Open", "Open file", Open),
-                    new MenuItem("Show _log", "", () =>  { running = ShowLog; Application.RequestStop (); }),
-                    new MenuItem("_ShowHex", "", () =>  { running = ShowHex; Application.RequestStop (); }),
+                    new MenuItem("_Save", "Save file", Save),
+                    new MenuItem("_New file", "", () => { NewFile();  srcLinesView.SourceCode = s8parser.GetSourceCode(); }),
+                    new MenuItem("Show _Log", "", () =>  { running = ShowLog; Application.RequestStop (); }),
+                    new MenuItem("Show _Hex", "", () =>  { running = ShowHex; Application.RequestStop (); }),
                     new MenuItem("_Quit", "", () => { running = null; top.Running = false; Application.RequestStop(); } )
                 }), // end of file menu
-            
-                new MenuBarItem("_Help", new MenuItem[]{
-                    new MenuItem("_About", "", ()
-                        => MessageBox.Query(10, 5, "About", "Written by Ronny Hansen\nVersion: 0.0.4", "Ok"))
-                }) // end of the help menu
-            });
 
+                new MenuBarItem("_Window", new MenuItem[]{
+                    new MenuItem("_Dissasembled", "", ()
+                        => {
+                            SetViewAsm();
+                            top.BringSubviewToFront(asmFrameView);
+                    }),
+                    new MenuItem("_Source", "", () => {
+                        SetViewSource();
+                        top.BringSubviewToFront(srcLinesView);
+                    })
+                }), // end of Window menu
+
+            new MenuBarItem("_Help", new MenuItem[]{
+                    new MenuItem("_About", "", ()
+                        => MessageBox.Query(10, 5, "About", "Written by Ronny Hansen\nVersion: 0.1.0", "Ok"))
+                }) // end of the help menu
+            }); ;
+
+
+
+            #region Input (Føde)
+            var inputFrameView = new FrameView("Input")
+            {
+                X = 0,
+                Y = 0,
+                Width = Dim.Fill(),
+                //Height = Dim.Fill()
+                Height = 3
+            };
+
+            inputField = new TextField("")
+            {
+                X = 0,
+                Y = 0,
+                Width = Dim.Fill(),
+                Height = Dim.Fill()
+            };
+
+            inputField.TextChanged += (NStack.ustring obj) =>
+            {
+                s8parser.s8d.SetInputFromHexString(obj.ToString());
+            };
+
+            inputFrameView.Add(inputField);
+            win.Add(inputFrameView);
+
+            #endregion Føde
+
+            #region Main Source window
+            srcFrameView = new FrameView("Source")
+            {
+                X = 0,
+                Y = Pos.Bottom(inputFrameView),
+                Width = Dim.Percent(75),
+                Height = Dim.Percent(50),
+            };
+
+            srcLinesView = new SourceView(s8parser)
+            {
+                X = 0,
+                Y = 0,
+                Width = Dim.Fill(),
+                Height = Dim.Fill(),
+            };
+
+            srcFrameView.Add(srcLinesView);
+            win.Add(srcFrameView);
+
+            srcFrameView.Visible = false; // default dont show this, but show dissasembler
+
+            #endregion Main Source window
 
 
 
             #region Main ASM window
-            var asmFrameView = new FrameView("ASM")
+            asmFrameView = new FrameView("Dissasembled")
             {
                 X = 0,
-                Y = 0,
+                Y = Pos.Bottom(inputFrameView),
                 Width = Dim.Percent(75),
-                Height = Dim.Percent(60),
+                Height = Dim.Percent(50),
             };
 
             asmLinesView = new AsmView(s8parser)
@@ -181,12 +290,17 @@ namespace S8Console.GUI
 
             #region Debug Controller
 
-            var frmDebugController = new DebugController(s8parser)
+            var frmDebugController = new DebugController(s8parser, "Controller")
             {
                 X = Pos.Right(asmFrameView),
-                Y = 0,
+                Y = Pos.Bottom(inputFrameView),
                 Width = Dim.Fill(),
                 Height = 5
+            };
+
+            frmDebugController.CommandButton += (string obj) =>
+            {
+                ExecuteCommandFunction(obj);
             };
 
             win.Add(frmDebugController);
@@ -232,7 +346,7 @@ namespace S8Console.GUI
             var commandFrameView = new FrameView("Debug commands")
             {
                 X = 0,
-                Y = Pos.Bottom(hexFrameView),
+                Y = Pos.AnchorEnd(3), //   Pos.Bottom(hexFrameView),
                 Width = asmFrameView.Width,
                 //Height = Dim.Fill()
                 Height = 3
@@ -262,7 +376,7 @@ namespace S8Console.GUI
             #endregion CommandWindow
 
 
-          
+
 
 
 #if _mouse_debug_
@@ -280,13 +394,64 @@ namespace S8Console.GUI
             top.Add(win, menu);
             top.Add(menu);
 
-
+            SelectSourceWindow();
             UpdateAsmAndHex();
 
             Application.Run();
 
         }
 
+        private static void ExecuteCommandFunction(string obj)
+        {
+            bool runCommand = true;
+            // If we are in source code mode, we need to check if we need a new recompile
+            if (srcFrameView.Visible)
+            {
+
+                string src = srcLinesView.SourceCode;
+
+
+                // if the src code in the source view is different, then recompile
+                if (src.Length > 0)
+                {
+
+                    var md5 = s8parser.CreateMD5(src);
+                    if ((md5 != s8parser.SourceFileMD5) | (obj == "RUN!"))
+                    {
+                        // Source code in editor different from stored version. Compile!!
+
+                        try
+                        {
+                            s8parser.SetSourceCode(src);
+                            var result = s8parser.s8a.AssembleSourceCode(src);
+
+                            if (result is not null)
+                            {
+                                s8parser.s8d.InitFromMemory(result);
+                            };
+
+                        }
+                        catch (S8AssemblerException s8ex)
+                        {
+                            runCommand = false;
+                            string error = s8ex.Message + "\r\nLine: " + s8ex.SourceCodeLine.ToString();
+
+                            MessageBox.ErrorQuery(50, 7, "Compile Error", error, "Cancel");
+
+                            srcLinesView.SetLineFocus(s8ex.SourceCodeLine);
+
+                        }
+                        catch (Exception ex)
+                        {
+                            runCommand = false;
+                            MessageBox.ErrorQuery(50, 7, "Compile Error", ex.ToString(), "Cancel");
+                        }
+                    }
+                }
+            }
+            if (runCommand)
+                s8parser.ParseCommand(obj);
+        }
 
         static private void ExecuteButton_Clicked()
         {
@@ -370,13 +535,50 @@ namespace S8Console.GUI
         static void NewFile()
         {
             var ok = new Button("Ok", is_default: true);
-            ok.Clicked += () => { Application.RequestStop(); };
+            ok.Clicked += () =>
+            {
+                s8parser.SetSourceCode("");
+                Application.RequestStop();
+            };
             var cancel = new Button("Cancel");
             cancel.Clicked += () => { Application.RequestStop(); };
 
             var d = new Dialog("New File", 50, 20, ok, cancel);
 
             Application.Run(d);
+
+
+        }
+
+        static void Save()
+        {
+
+            var d = new SaveDialog("Save", "Save to file");
+            Application.Run(d);
+
+            if (!d.Canceled)
+            {
+                currentFileName = d.FilePath.ToString();
+
+                if (File.Exists(currentFileName))
+                {
+                    var result = MessageBox.Query(50, 7, "File exists. Overwrite ? ", currentFileName, "OK", "Cancel");
+                    if (result != 0) return;
+                }
+
+
+                string sourceCode = s8parser.GetSourceCode();
+                using (StreamWriter sw = new StreamWriter(currentFileName))
+                {
+                    sw.Write(sourceCode);
+
+                    sw.Flush();                    
+                    sw.Close();
+                }
+
+                MessageBox.Query(50, 7, $"Saved file. {sourceCode.Length} bytes." , currentFileName, "OK");
+
+            }
         }
 
         static void Open()
@@ -390,11 +592,15 @@ namespace S8Console.GUI
 
                 if ((currentFileName.Contains(".asm")) | (currentFileName.Contains(".slede8")))
                 {
+                    SetViewSource();
+
+                    srcLinesView.SourceCode = File.ReadAllText(currentFileName);
                     s8parser.ParseCommand("ASM " + currentFileName);
                     UpdateAsmAndHex();
                 }
                 else if (s8parser.s8d.Init(currentFileName))
                 {
+                    SetViewAsm();
                     UpdateAsmAndHex();
 
                     //MessageBox.Query(50, 7, "Loaded file", d.FilePath, "Ok");                    

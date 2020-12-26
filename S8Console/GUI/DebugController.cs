@@ -10,9 +10,14 @@ namespace S8Console.GUI
 {
     public class DebugController : FrameView
     {
-        public DebugController(S8CommandParser parser)
+
+        public event Action<string> CommandButton;
+
+        public DebugController(S8CommandParser parser, string title)
         {
             int y = 0;
+
+            this.Title = title;
 
             var stepButton = new Button("Step", true)
             {
@@ -47,18 +52,18 @@ namespace S8Console.GUI
 
             stepButton.Clicked += delegate ()
             {
-                parser.ParseCommand("STEP");
+                CommandButton?.Invoke("STEP");
             };
 
             runButton.Clicked += delegate ()
             {
-                parser.ParseCommand("RUN");
+                CommandButton?.Invoke("RUN!");
             };
 
 
             resetButton.Clicked += delegate ()
             {
-                parser.ParseCommand("RESET");
+                CommandButton?.Invoke("RESET");
             };
 
         }

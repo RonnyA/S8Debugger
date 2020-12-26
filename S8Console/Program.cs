@@ -44,9 +44,9 @@ namespace S8Console
                 Console.Write(parser.currentAddress.ToString("X3") + "] ");
 
 
-                string input = Console.ReadLine().ToUpper();
+                string input = Console.ReadLine();
 
-                switch (input)
+                switch (input.ToUpper())
                 {
                     case "Q":
                     case "QUIT":
@@ -58,6 +58,7 @@ namespace S8Console
                         Console.Clear();
                         break;
 
+                    case "G":
                     case "GUI":
                         
                         var s8gui = new S8Gui(parser);

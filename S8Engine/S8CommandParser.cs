@@ -1,5 +1,7 @@
 ﻿using System;
 using System.IO;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace S8Debugger
 {
@@ -14,6 +16,46 @@ namespace S8Debugger
 
         public UInt16 currentAddress { get; set; }
         public bool showAddress { get; set; }
+        #endregion
+
+        #region Source Code
+
+        string _sourceCode = string.Empty;
+        public void SetSourceCode(string sourceCode)
+        {
+            _sourceCode = sourceCode;
+
+            SourceFileMD5 = CreateMD5(_sourceCode);
+        }
+
+        public string CreateMD5(string input)
+        {
+            if (string.IsNullOrEmpty(input)) return "";
+
+            // Use input string to calculate MD5 hash
+            using (System.Security.Cryptography.MD5 md5 = System.Security.Cryptography.MD5.Create())
+            {
+                byte[] inputBytes = System.Text.Encoding.ASCII.GetBytes(input);
+                byte[] hashBytes = md5.ComputeHash(inputBytes);
+
+                // Convert the byte array to hexadecimal string
+                StringBuilder sb = new StringBuilder();
+                for (int i = 0; i < hashBytes.Length; i++)
+                {
+                    sb.Append(hashBytes[i].ToString("X2"));
+                }
+                return sb.ToString();
+            }
+        }
+
+        public string  GetSourceCode()
+        {
+            return _sourceCode;
+        }
+
+        public string SourceFileMD5 { get; set; }
+        public string SourceFileName { get; set; }
+
         #endregion
 
         #region Eventing
@@ -115,20 +157,27 @@ namespace S8Debugger
                     case "A": // ASssemble statement
                         if (cmd.Length > 1)
                         {
-
-                            var result = s8a?.AssembleStatement(inputCommand.Substring(2));
-
-                            LogMessage($"A return {result.Length} bytes");
-                            Console.Write(" >");
-
-                            foreach (byte b in result)
+                            try
                             {
-                                Console.Write($"0x{b:X2} ");
+                                var result = s8a?.AssembleStatement(inputCommand.Substring(2));
+
+                                LogMessage($"A return {result.Length} bytes");
+                                Console.Write(" >");
+
+                                foreach (byte b in result)
+                                {
+                                    Console.Write($"0x{b:X2} ");
+                                }
+                                LogMessage();
                             }
-                            LogMessage();
+                            catch (Exception ex)
+                            {
+                                LogMessage("Assembly failed, ex = " + ex.ToString());
+                            }
+
                         }
                         break;
-
+                   
                     case "ASM!": //Assemble file (for validation only)
                         if (cmd.Length > 1)
                         {
@@ -138,17 +187,25 @@ namespace S8Debugger
                             {
                                 s8File = cmd[2];
                             }
-
-                            var s8prog = s8a?.AssembleFile(asmFile, s8File);
-                            if (s8prog is null)
+                            try
                             {
-                                LogMessage("Assembly FAILED!!");
+                                var s8prog = s8a?.AssembleFile(asmFile, s8File);
+                                if (s8prog is null)
+                                {
+                                    LogMessage("Assembly FAILED!!");
+                                }
+                                else
+                                {
+                                    LogMessage("Assembled file OK, size = " + s8prog.exe.Length);
+                                };
+                                currentAddress = s8d.cpu.state.pc;
                             }
-                            else
+                            catch (Exception ex)
                             {
-                                LogMessage("Assembled file OK, size = " + s8prog.Length);
-                            };
-                            currentAddress = s8d.cpu.state.pc;
+
+                                LogMessage("Assembly failed, ex = " + ex.ToString());
+                            }
+                            
                         }
                         break;
 
@@ -162,19 +219,24 @@ namespace S8Debugger
                             {
                                 s8File = cmd[2];
                             }
-
-                            var s8prog = s8a?.AssembleFile(asmFile, s8File);
-                            if (s8prog is null)
+                            try
                             {
-                                LogMessage("Assembly FAILED!!");
+                                var s8prog = s8a?.AssembleFile(asmFile, s8File);
+                                if (s8prog is null)
+                                {
+                                    LogMessage("Assembly FAILED!!");
+                                }
+                                else
+                                {
+                                    //s8d = new S8Dissasembler();
+                                    s8d.InitFromMemory(s8prog);
+                                };
+                                currentAddress = s8d.cpu.state.pc;
                             }
-                            else
+                            catch (Exception ex)
                             {
-                                //s8d = new S8Dissasembler();
-                                s8d.InitFromMemory(s8prog);
-                            };
-
-                            currentAddress = s8d.cpu.state.pc;
+                                LogMessage("Assembly failed, ex = " + ex.ToString());
+                            }
 
                         }
                         break;
@@ -183,18 +245,45 @@ namespace S8Debugger
                     case "LOAD":
                         if (cmd.Length > 1)
                         {
-                            if (File.Exists(cmd[1]))
+                            string fname = cmd[1];
+
+                            if (File.Exists(fname))
                             {
-                                //s8d = new S8Dissasembler();
-                                if (!s8d.Init(cmd[1]))
+                                if (fname.Contains(".slede8", StringComparison.InvariantCultureIgnoreCase))
                                 {
-                                    LogMessage("Failed to load image");
+
+                                    SourceFileName = fname;
+
+                                    LogMessage($"Loading source code file: '{fname}'");
+                                    var src = File.ReadAllText(fname);
+                                    if (src.Length > 0)
+                                    {
+                                        SetSourceCode(src);
+                                        AssembleSourceCode();
+                                    }
+                                    else
+                                    {
+                                        LogMessage($"Failed! File '{fname}' is empty ...?");
+                                    }
                                 }
-                                currentAddress = 0;
+                                else
+                                {
+                                    LogMessage($"Loading image file: '{fname}'");
+
+                                    SourceFileName = string.Empty;
+                                    SetSourceCode(string.Empty);
+                                    SourceFileMD5 = string.Empty;
+
+                                    if (!s8d.Init(fname))
+                                    {
+                                        LogMessage("Failed to load image");
+                                    }
+                                    currentAddress = 0;
+                                }
                             }
                             else
                             {
-                                LogMessage("Unknown S8 file " + cmd[1]);
+                                LogMessage($"File doesn't exists: '{fname}'");
                             }
 
                         }
@@ -204,7 +293,7 @@ namespace S8Debugger
                     case "FØDE":
                         if (cmd.Length > 1)
                         {
-                            s8d.SetInput(cmd[1]);
+                            s8d.SetInputFromHexString(cmd[1]);
                         }
                         else
                         {
@@ -241,8 +330,17 @@ namespace S8Debugger
 
                     case "R":
                     case "RUN":
+                        if (GetSourceCode().Length >0)
+                        {
+                            AssembleSourceCode();
+                        }
                         currentAddress = s8d.Run();
                         break;
+
+                    case "RUN!": // Run without assembling source code
+                        currentAddress = s8d.Run();
+                        break;
+
                     case "RUNV":
                         s8d.cpu.VerboseMode = true;
                         currentAddress = s8d.Run();
@@ -309,6 +407,25 @@ namespace S8Debugger
                 LogMessage("Sleden kræsjet: " + ex.ToString());
             }
 
+        }
+
+        private void AssembleSourceCode()
+        {
+            string src = GetSourceCode();
+
+            S8Assembler.Target result = s8a.AssembleSourceCode(src);
+
+            if (result is null)
+            {
+                LogMessage("Assembly FAILED!!");
+            }
+            else
+            {
+                //s8d = new S8Dissasembler();
+                s8d.InitFromMemory(result);
+            };
+
+            currentAddress = s8d.cpu.state.pc;
         }
 
 

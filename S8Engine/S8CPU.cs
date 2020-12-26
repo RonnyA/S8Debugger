@@ -45,7 +45,7 @@ namespace S8Debugger
 
         public bool crashed;
 
-        public byte[] stdin = new byte[1];
+        public byte[] stdin = new byte[0];
         public MemoryStream outputStream = new MemoryStream();
         public int maxTicks;
     };
