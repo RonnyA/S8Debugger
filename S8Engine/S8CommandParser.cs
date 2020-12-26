@@ -458,6 +458,41 @@ namespace S8Debugger
         }
 
 
+
+        public string GetCommands()
+        {
+            string cmds =
+                @"
+D - Dissassemble [start] [length]
+M - Memory Dump  [start] [length]
+Limits itself to inside loaded image
+
+D!- Dissassemble [start] [length]
+M!- Memory Dump  [start] [length]
+Enables access to memory ourside loaded image
+
+INPUT - SET INPUT hexhexhex
+PC    - SET pc = xxx
+RUN   - Run program from 0 (Will compile source code first)
+RUN!  - Run program from 0 (Will not compile source code)
+REGS  - Dump registers
+RESET - Reset registers
+STEP  - Step PC [steps]
+TICKS - Set Max Ticks 0xNN
+UNITTEST [filename] - Run unit tests agains [filename]
+
+VERBOSE = Set Verbose output of RUN and STEP
+TERSE   = Remove verbose output of RUN and STEP
+! = Change showaddress flag
+            
+A    statement        - Assemble [statement]
+ASM  sledefil [s8fil] - Assemble and load into memory. Optionally save to S8 file
+ASM! sledefil         - Assemble, dont load into memory
+
+GUI - Enter GUI mode
+Q   - Quit";
+            return cmds;
+        }
         public void PrintHelp()
         {
             LogMessage("D - Dissassemble [start] [length]");

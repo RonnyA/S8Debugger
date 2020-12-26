@@ -183,6 +183,7 @@ namespace S8Console.GUI
                 }), // end of Window menu
 
             new MenuBarItem("_Help", new MenuItem[]{
+                    new MenuItem("_Commands", "", Commands),
                     new MenuItem("_About", "", ()
                         => MessageBox.Query(10, 5, "About", "Written by Ronny Hansen\nVersion: 0.1.0", "Ok"))
                 }) // end of the help menu
@@ -548,6 +549,13 @@ namespace S8Console.GUI
             Application.Run(d);
 
 
+        }
+
+        static void Commands()
+        {
+            string strCommands = s8parser.GetCommands();
+
+            MessageBox.Query(50, 20, $"SLEDE8 Commands", strCommands, "OK");
         }
 
         static void Save()
