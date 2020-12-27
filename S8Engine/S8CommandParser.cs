@@ -459,10 +459,14 @@ namespace S8Debugger
 
 
 
+        /// <summary>
+        /// Get the help text that describes all the available commands
+        /// </summary>
+        /// <returns></returns>
         public string GetCommands()
         {
             string cmds =
-                @"
+@"
 D - Dissassemble [start] [length]
 M - Memory Dump  [start] [length]
 Limits itself to inside loaded image
@@ -495,41 +499,7 @@ Q   - Quit";
         }
         public void PrintHelp()
         {
-            LogMessage("D - Dissassemble [start] [length]");
-            LogMessage("M - Memory Dump  [start] [length]");
-            LogMessage("Limits itself to inside loaded image");
-            LogMessage();
-
-            LogMessage("D!- Dissassemble [start] [length]");
-            LogMessage("M!- Memory Dump  [start] [length]");
-            LogMessage("Enables access to memory ourside loaded image"); ;
-            LogMessage("");
-
-            LogMessage("");
-            LogMessage("INPUT - SET INPUT hexhexhex");
-            LogMessage("PC    - SET pc = xxx");
-            LogMessage("RUN   - Run program from 0");            
-            LogMessage("REGS  - Dump registers");
-            LogMessage("RESET - Reset registers");
-            LogMessage("STEP  - Step PC [steps]");
-            LogMessage("TICKS - Set Max Ticks 0xNN");
-            LogMessage("UNITTEST [filename] - Run unit tests agains [filename]");
-            LogMessage("");
-
-            LogMessage("VERBOSE = Set Verbose output of RUN and STEP");
-            LogMessage("TERSE   = Remove verbose output of RUN and STEP");
-            LogMessage("! = Change showaddress flag");
-            LogMessage("");
-
-
-            LogMessage("");
-            LogMessage("A    statement        - Assemble [statement]");
-            LogMessage("ASM  sledefil [s8fil] - Assemble and load into memory. Optionally save to S8 file");
-            LogMessage("ASM! sledefil         - Assemble, dont load into memory");
-            LogMessage("");
-
-            LogMessage("GUI - Enter GUI mode");
-            LogMessage("Q   - Quit");
+            LogMessage(GetCommands());            
         }
 
         #endregion Helper Functions
