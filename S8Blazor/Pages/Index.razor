@@ -1,0 +1,75 @@
+﻿@page "/"
+@inject IS8Service s8service
+<h3>SLEDE8 editor</h3>
+
+<MonacoEditor @ref="_editor" Id="s8editor" ConstructionOptions="EditorConstructionOptions" OnDidInit="EditorOnDidInit" OnContextMenu="OnContextMenu" />
+
+<br />
+<br />
+
+<button class="btn btn-primary" @onclick="RunCode">Run</button>
+
+@code {
+    // <div id="container" style="width:1024px;height:600px;border:1px solid grey"></div>
+    // https://github.com/serdarciplak/BlazorMonaco
+    // https://microsoft.github.io/monaco-editor/api/index.html
+
+    // Height of MonacoEditor is set in CSS - monaco-editor-container
+
+    private MonacoEditor _editor { get; set; }
+
+    private async Task RunCode()
+    {
+        await s8service.Run();
+    }
+
+    string GetDefaultSource()
+    {
+        return "STOPP";
+    }
+
+    private StandaloneEditorConstructionOptions EditorConstructionOptions(MonacoEditor editor)
+    {
+        string src = GetDefaultSource();
+
+        return new StandaloneEditorConstructionOptions
+        {
+            AutomaticLayout = true,
+            Language = "SLEDE8",
+            Value = src
+        };
+    }
+
+    private async Task EditorOnDidInit(MonacoEditorBase editor)
+    {
+        await _editor.AddCommand((int)KeyMode.CtrlCmd | (int)KeyCode.KEY_H, (editor, keyCode) =>
+        {
+            Console.WriteLine("Ctrl+H : Initial editor command is triggered.");
+        });
+
+        var newDecorations = new ModelDeltaDecoration[]
+        {
+            new ModelDeltaDecoration
+            {
+                Range = new BlazorMonaco.Bridge.Range(3,1,3,1),
+                Options = new ModelDecorationOptions
+                {
+                    IsWholeLine = true,
+                    ClassName = "decorationContentClass",
+                    GlyphMarginClassName = "decorationGlyphMarginClass"
+                }
+            }
+                };
+
+        decorationIds = await _editor.DeltaDecorations(null, newDecorations);
+        // You can now use 'decorationIds' to change or remove the decorations
+    }
+
+    private string[] decorationIds;
+
+    private void OnContextMenu(EditorMouseEvent eventArg)
+    {
+        Console.WriteLine("OnContextMenu : " + System.Text.Json.JsonSerializer.Serialize(eventArg));
+    }
+
+}
