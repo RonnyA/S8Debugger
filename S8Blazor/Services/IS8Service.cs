@@ -7,7 +7,11 @@ namespace S8Blazor.Services
 {
     public interface IS8Service
     {
-        Task<bool> Run();
+        bool Run();
+
+        void SetSourceCode(string src);
+        void SetInput(string input);
+        string GetOutput();
 
     }
 }

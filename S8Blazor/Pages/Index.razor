@@ -4,9 +4,13 @@
 
 <MonacoEditor @ref="_editor" Id="s8editor" ConstructionOptions="EditorConstructionOptions" OnDidInit="EditorOnDidInit" OnContextMenu="OnContextMenu" />
 
-<br />
-<br />
 
+<br />
+<br />
+ 
+<textarea class="width" readonly @bind="@output"  cols="60" rows="10" ></textarea>
+<br />
+<br />
 <button class="btn btn-primary" @onclick="RunCode">Run</button>
 
 @code {
@@ -17,14 +21,23 @@
     // Height of MonacoEditor is set in CSS - monaco-editor-container
 
     private MonacoEditor _editor { get; set; }
+    public string output { get; set; }
+
 
     private async Task RunCode()
     {
-        await s8service.Run();
+        var src = await _editor.GetValue();
+
+        s8service.SetSourceCode(src);
+
+        s8service.Run();
+
+        output = s8service.GetOutput();
     }
 
     string GetDefaultSource()
     {
+        output = "Edit and Run";
         return "STOPP";
     }
 
@@ -59,7 +72,7 @@
                     GlyphMarginClassName = "decorationGlyphMarginClass"
                 }
             }
-                };
+                        };
 
         decorationIds = await _editor.DeltaDecorations(null, newDecorations);
         // You can now use 'decorationIds' to change or remove the decorations

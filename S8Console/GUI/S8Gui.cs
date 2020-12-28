@@ -416,8 +416,8 @@ namespace S8Console.GUI
                 if (src.Length > 0)
                 {
 
-                    var md5 = s8parser.CreateMD5(src);
-                    if ((md5 != s8parser.SourceFileMD5) | (obj == "RUN!"))
+                    var hashCode = src.GetHashCode();
+                    if ((hashCode != s8parser.SourceFileHash) | (obj == "RUN!"))
                     {
                         // Source code in editor different from stored version. Compile!!
 

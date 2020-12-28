@@ -25,35 +25,15 @@ namespace S8Debugger
         {
             _sourceCode = sourceCode;
 
-            SourceFileMD5 = CreateMD5(_sourceCode);
+                SourceFileHash = _sourceCode.GetHashCode();
         }
-
-        public string CreateMD5(string input)
-        {
-            if (string.IsNullOrEmpty(input)) return "";
-
-            // Use input string to calculate MD5 hash
-            using (System.Security.Cryptography.MD5 md5 = System.Security.Cryptography.MD5.Create())
-            {
-                byte[] inputBytes = System.Text.Encoding.ASCII.GetBytes(input);
-                byte[] hashBytes = md5.ComputeHash(inputBytes);
-
-                // Convert the byte array to hexadecimal string
-                StringBuilder sb = new StringBuilder();
-                for (int i = 0; i < hashBytes.Length; i++)
-                {
-                    sb.Append(hashBytes[i].ToString("X2"));
-                }
-                return sb.ToString();
-            }
-        }
-
+       
         public string  GetSourceCode()
         {
             return _sourceCode;
         }
 
-        public string SourceFileMD5 { get; set; }
+        public int SourceFileHash { get; set; }
         public string SourceFileName { get; set; }
 
         #endregion
@@ -272,7 +252,7 @@ namespace S8Debugger
 
                                     SourceFileName = string.Empty;
                                     SetSourceCode(string.Empty);
-                                    SourceFileMD5 = string.Empty;
+                                    SourceFileHash = 0;
 
                                     if (!s8d.Init(fname))
                                     {
