@@ -18,8 +18,16 @@ namespace S8Blazor.Services
             parser = new S8CommandParser();
             parser.MessageHandler += (object sender, LogMessageEventArgs e) =>
             {
+                Console.WriteLine(e.LogMessage);
                 output.Add(e.LogMessage);
             };
+        }
+        
+        public S8CommandParser Parser { get { return parser; }}
+
+        public void ClearOutput()
+        {
+            output.Clear();
         }
 
         public string GetOutput()
@@ -34,25 +42,61 @@ namespace S8Blazor.Services
             return result;
         }
 
-        public bool Run()
+
+        private void ExecuteCommandFunction(string command, bool isInSourceMode=false)
         {
-            output.Clear();
+            bool runCommand = true;
+            // If we are in source code mode, we need to check if we need a new recompile
+            if (isInSourceMode)
+            {
 
-            parser.ParseCommand("RUN");
+                //string src = srcLinesView.SourceCode;
+                string src = string.Empty;
 
-            return true;
+                // if the src code in the source view is different, then recompile
+                if (src.Length > 0)
+                {
 
+                    var hashCode = src.GetHashCode();
+                    if ((hashCode != parser.SourceFileHash) | (command == "RUN!"))
+                    {
+                        // Source code in editor different from stored version. Compile!!
+
+                        try
+                        {
+                            parser.SetSourceCode(src);
+                            var result = parser.s8a.AssembleSourceCode(src);
+
+                            if (result is not null)
+                            {
+                                parser.s8d.InitFromMemory(result);
+                            };
+
+                        }
+                        catch (S8AssemblerException s8ex)
+                        {
+                            runCommand = false;
+                            string error = s8ex.Message + "\r\nLine: " + s8ex.SourceCodeLine.ToString();
+
+                            /*
+                            MessageBox.ErrorQuery(50, 7, "Compile Error", error, "Cancel");
+
+                            srcLinesView.SetLineFocus(s8ex.SourceCodeLine);
+                            */
+                        }
+                        catch (Exception ex)
+                        {
+                            runCommand = false;
+                            /*
+                            MessageBox.ErrorQuery(50, 7, "Compile Error", ex.ToString(), "Cancel");
+                            */
+                        }
+                    }
+                }
+            }
+            if (runCommand)
+                parser.ParseCommand(command);
         }
 
-
-        public void  SetInput(string input)
-        {
-            parser.s8d.SetInputFromHexString(input);
-        }
-
-        public void SetSourceCode(string src)
-        {
-            parser.SetSourceCode(src);
-        }
     }
 }

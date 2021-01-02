@@ -1,110 +1,164 @@
 ﻿@page "/Debugger"
-<h3>Debugger</h3>
-
-<EditForm Model="Output">
+@inject IS8Service s8service
+@implements IDisposable
+    <h1>Dissasembler</h1>
     <div class="form-group">
-        <label for="command">Output</label>
-        <InputTextArea Height="50" class="form-control" id="output" @bind-Value="Output" placeholder="Enter command" readonly />
+        <label for="Input">Input</label>
+        <input class="form-control" id="Input" @bind="@input" placeholder="Føde" />
     </div>
 
+    <br />
 
-    <div class="form-group">
-        <label for="command">Command</label>
-        <InputText class="form-control" id="command" @bind-Value="Command" placeholder="Enter command" />
-    </div>
-</EditForm>
-
-<div id="container" style="width:1024px;height:600px;border:1px solid grey"></div>
-<button class="btn" @onclick="Run">Run</button>
-<br />
+    <MonacoEditor @ref="_editor" Id="s8editor" ConstructionOptions="EditorConstructionOptions" OnDidInit="EditorOnDidInit" OnContextMenu="OnContextMenu" />
 
 
-@code {
-    string Output = "";
-    string Command = "";
+    <br />
+    <br />
 
-    private void Run()
-    {
+<textarea class="width" readonly @bind="@Output" cols="60" rows="10"></textarea>
+    <br />
+    <br />
+    <button class="btn btn-primary" @onclick="RunCode">Run</button>
+    <button class="btn btn-secondary" @onclick="StepCode">Step</button>
+    <button class="btn btn-danger" @onclick="ResetCode">Reset</button>
+
+    @code {
+
+        string _input;
+        private MonacoEditor _editor { get; set; }
+
+        string Assembly = string.Empty;
+        string Output = string.Empty;
+        string Command = string.Empty;
+        private int _currentLine = -1;
+
+        public string input
+        {
+            get { return _input; }
+            set { _input = value; s8service.Parser.s8d.SetInputFromHexString(_input); }
+        }
+
+        #region Initialize and clean up
+        protected override void OnInitialized()
+        {
+            s8service.Parser.s8d.cpu.CpuStepHandler += CpuStepLineHandler;
+        }
+
+        public void Dispose()
+        {
+            // Clean up hooked event handlers
+            s8service.Parser.s8d.cpu.CpuStepHandler -= CpuStepLineHandler;
+        }
+
+        #endregion Initialize and clean up
+
+        protected override async Task OnAfterRenderAsync(bool firstRender)
+        {
+            if (!firstRender)
+            {
+                await SetLineFocus(_currentLine);
+            }
+            //return base.OnAfterRenderAsync(firstRender);
+        }
+
+        private void CpuStepLineHandler(object sender, CpuStepInfo cpustep)
+        {
+            _currentLine = (cpustep.pc / 2)+1;
+            //SetLineFocus(_currentLine);
+        }
+
+        private string[] decorationIds;
+
+        internal async Task SetLineFocus(int sourceCodeLine)
+        {
+            Console.WriteLine($"Stepping to {sourceCodeLine}");
+
+            await _editor.ResetDeltaDecorations(); // remove other decorations
+
+            if (sourceCodeLine < 0) return;
+
+            var newDecorations = new ModelDeltaDecoration[]
+            {
+                new ModelDeltaDecoration
+                {
+                    Range = new BlazorMonaco.Bridge.Range(sourceCodeLine,1,sourceCodeLine,1),
+                    Options = new ModelDecorationOptions
+                    {
+                        IsWholeLine = true,
+                        ClassName = "decorationContentClass",
+                        GlyphMarginClassName = "decorationGlyphMarginClass"
+                    }
+                }
+            };
+
+            //decorationIds = AsyncHelper.RunSync<string[]>(() => _editor.DeltaDecorations(null, newDecorations));
+            decorationIds = await _editor.DeltaDecorations(decorationIds, newDecorations);
+            // You can now use 'decorationIds' to change or remove the decorations
+
+            _currentLine = -1;
+        }
+
+
+
+        private async Task StepCode()
+        {
+            s8service.ClearOutput();
+            s8service.Parser.ParseCommand("STEP");
+            Output = s8service.GetOutput();
+        }
+
+        private async Task ResetCode()
+        {
+            _editor.SetValue(GetDissasmbledCode());
+            s8service.ClearOutput();
+            s8service.Parser.ParseCommand("RESET");
+            Output = s8service.GetOutput();
+        }
+
+
+        private async Task RunCode()
+        {
+
+            s8service.ClearOutput();
+            s8service.Parser.ParseCommand("RUN!");
+            Output = s8service.GetOutput();
+        }
+
+        string GetDissasmbledCode()
+        {
+            Output = "Step!";
+
+            var asm = s8service.Parser.s8d.DissasembleToList(0, 0xFFF, s8service.Parser.showAddress, false);
+
+            return string.Join(Environment.NewLine, asm);
+        }
+
+        private StandaloneEditorConstructionOptions EditorConstructionOptions(MonacoEditor editor)
+        {
+            string src = GetDissasmbledCode();
+            input = "";
+
+            return new StandaloneEditorConstructionOptions
+            {
+                AutomaticLayout = true,
+                Language = "ASM", //SLEDE8
+                Value = src
+            };
+        }
+
+        private async Task EditorOnDidInit(MonacoEditorBase editor)
+        {
+            await _editor.AddCommand((int)KeyMode.CtrlCmd | (int)KeyCode.KEY_H, (editor, keyCode) =>
+            {
+                Console.WriteLine("Ctrl+H : Initial editor command is triggered.");
+            });
+        }
+
+
+
+        private void OnContextMenu(EditorMouseEvent eventArg)
+        {
+            Console.WriteLine("OnContextMenu : " + System.Text.Json.JsonSerializer.Serialize(eventArg));
+        }
 
     }
-
-
-
-    /*
-              // @layout MainLayout
-              public string Output = "";
-              const string DefaultCode = @"using System;
-
-              [Inject] private HttpClient Client { get; set; }
-              [Inject] private Monaco Monaco { get; set; }
-
-              protected override Task OnInitializedAsync()
-              {
-              Compiler.InitializeMetadataReferences(Client);
-              return base.OnInitializedAsync();
-              }
-
-              protected override void OnAfterRender(bool firstRender)
-              {
-              base.OnAfterRender(firstRender);
-              if (firstRender)
-              {
-              Monaco.Initialize("container", DefaultCode, "csharp");
-              Run();
-              }
-              }
-
-              public Task Run()
-              {
-              return Compiler.WhenReady(RunInternal);
-              }
-
-              async Task RunInternal()
-              {
-              Output = "";
-
-              Console.WriteLine("Compiling and Running code");
-              var sw = Stopwatch.StartNew();
-
-              var currentOut = Console.Out;
-              var writer = new StringWriter();
-              Console.SetOut(writer);
-
-              Exception exception = null;
-              try
-              {
-              var (success, asm) = Compiler.LoadSource(Monaco.GetCode("container"));
-              if (success)
-              {
-              var entry = asm.EntryPoint;
-              if (entry.Name == "<Main>
-                  ") // sync wrapper over async Task Main
-                  {
-                  entry = entry.DeclaringType.GetMethod("Main", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static); // reflect for the async Task Main
-                  }
-                  var hasArgs = entry.GetParameters().Length > 0;
-                  var result = entry.Invoke(null, hasArgs ? new object[] { new string[0] } : null);
-                  if (result is Task t)
-                  {
-                  await t;
-                  }
-                  }
-                  }
-                  catch (Exception ex)
-                  {
-                  exception = ex;
-                  }
-                  Output = writer.ToString();
-                  if (exception != null)
-                  {
-                  Output += "\r\n" + exception.ToString();
-                  }
-                  Console.SetOut(currentOut);
-
-                  sw.Stop();
-                  Console.WriteLine("Done in " + sw.ElapsedMilliseconds + "ms");
-                  }
-
-                  */
-
-}
