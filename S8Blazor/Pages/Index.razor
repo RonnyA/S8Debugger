@@ -1,0 +1,208 @@
+﻿@page "/"
+@inject IS8Service s8service
+@implements IDisposable
+
+<div class="alert alert-primary" role="alert">
+    SLEDE8 Source code editor and runtime
+</div>
+
+
+<div class="form-group">    
+    <input class="form-control" id="Input" @bind="@input" placeholder="Input" />
+</div>
+<br />
+
+<table width="100%" style="table-layout:fixed;"> 
+    <tbody>
+        <tr>
+            <td width="70%">
+            <MonacoEditor @ref="_editor" Id="s8editor" ConstructionOptions="EditorConstructionOptions" OnDidInit="EditorOnDidInit" OnContextMenu="OnContextMenu" />
+            </td>
+            <td width="30%">
+            <CpuStateView cpuState="@s8service.Parser.s8d.cpu.state"></CpuStateView>
+            </td>
+        </tr>
+    </tbody>
+</table>
+
+
+<br />
+<br />
+
+<textarea style="width: 100%; max-width: 100%;" readonly @bind="@output" rows="10"></textarea>
+<br />
+<br />
+<button class="btn btn-primary" @onclick="RunCode">Run</button>
+<button class="btn btn-secondary" @onclick="StepCode">Step</button>
+<button class="btn btn-danger" @onclick="ResetCode">Reset</button>
+
+@code {
+    // <div id="container" style="width:1024px;height:600px;border:1px solid grey"></div>
+    // https://github.com/serdarciplak/BlazorMonaco
+    // https://microsoft.github.io/monaco-editor/api/index.html
+
+    // Height of MonacoEditor is set in CSS - monaco-editor-container
+
+    string _input = string.Empty;
+
+    private MonacoEditor _editor { get; set; }
+    public string output { get; set; }
+
+    private int _currentLine = -1;
+
+    public string input
+    {
+        get { return _input; }
+        set { _input = value; s8service.Parser.s8d.SetInputFromHexString(_input); }
+    }
+
+    public void Dispose()
+    {
+        // Clean up hooked event handlers
+        s8service.Parser.s8d.cpu.CpuStepHandler -= CpuStepLineHandler;
+    }
+
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            await SetLineFocus(_currentLine);
+        }
+        //return base.OnAfterRenderAsync(firstRender);
+    }
+
+    protected override void OnInitialized()
+    {
+        s8service.Parser.s8d.cpu.CpuStepHandler += CpuStepLineHandler;
+    }
+
+    private void CpuStepLineHandler(object sender, CpuStepInfo cpustep)
+    {
+
+        // map hex PC to line no
+
+        UInt16 pc = cpustep.pc;
+
+        if (s8service.Parser.s8d.PDB is null) return;
+
+        foreach (S8Assembler.DebugInfo dbg in s8service.Parser.s8d.PDB)
+        {
+            if (dbg.address == cpustep.pc)
+            {
+                _currentLine = dbg.info.lineNumber;
+
+                //InvokeAsync(StateHasChanged);
+
+                break;
+            }
+        }
+
+    }
+
+    private string[] decorationIds;
+
+    internal async Task SetLineFocus(int sourceCodeLine)
+    {
+        Console.WriteLine($"Stepping to {sourceCodeLine}");
+
+        await _editor.ResetDeltaDecorations(); // remove other decorations
+
+        if (sourceCodeLine < 0) return;
+
+        var newDecorations = new ModelDeltaDecoration[]
+        {
+            new ModelDeltaDecoration
+            {
+                Range = new BlazorMonaco.Bridge.Range(sourceCodeLine,1,sourceCodeLine,1),
+                Options = new ModelDecorationOptions
+                {
+                    IsWholeLine = true,
+                    ClassName = "decorationContentClass",
+                    GlyphMarginClassName = "decorationGlyphMarginClass"
+                }
+            }
+        };
+
+        // Scroll
+        await _editor.RevealLine(sourceCodeLine);
+
+
+        //decorationIds = AsyncHelper.RunSync<string[]>(() => _editor.DeltaDecorations(null, newDecorations));
+        decorationIds = await _editor.DeltaDecorations(decorationIds, newDecorations);
+        // You can now use 'decorationIds' to change or remove the decorations
+
+        _currentLine = -1;
+    }
+
+    private async Task UpdateS8FromUI()
+    {
+
+        var src = await _editor.GetValue();
+        var res = s8service.Parser.SetSourceCode(src);
+        if (res)
+        {
+            s8service.Parser.AssembleSourceCode();
+        }
+    }
+
+    private async Task StepCode()
+    {
+        await UpdateS8FromUI();
+        s8service.Parser.ParseCommand("STEP");
+        output = s8service.GetOutput();
+    }
+
+    private async Task ResetCode()
+    {
+        s8service.Parser.ParseCommand("RESET");
+        output = s8service.GetOutput();
+    }
+
+
+    private async Task RunCode()
+    {
+
+        await UpdateS8FromUI();
+
+        s8service.ClearOutput();
+        s8service.Parser.ParseCommand("RUN!"); // Run without assembling source code (as that is already taken care of)
+        output = s8service.GetOutput();
+    }
+
+    string GetDefaultSource()
+    {
+        output = "Edit and Run";
+        return s8service.Parser.GetSampleSourceCode();
+        //SourceCode = s8service.Parser.GetSourceCode();
+    }
+
+    private StandaloneEditorConstructionOptions EditorConstructionOptions(MonacoEditor editor)
+    {
+        string src = GetDefaultSource();
+
+
+        return new StandaloneEditorConstructionOptions
+        {
+            AutomaticLayout = true,
+            Language = "ASM", //SLEDE8
+            Value = src
+        };
+    }
+
+    private async Task EditorOnDidInit(MonacoEditorBase editor)
+    {
+        await _editor.AddCommand((int)KeyMode.CtrlCmd | (int)KeyCode.KEY_H, (editor, keyCode) =>
+        {
+            Console.WriteLine("Ctrl+H : Initial editor command is triggered.");
+        });
+    }
+
+
+
+    private void OnContextMenu(EditorMouseEvent eventArg)
+    {
+        Console.WriteLine("OnContextMenu : " + System.Text.Json.JsonSerializer.Serialize(eventArg));
+    }
+
+}

@@ -66,11 +66,6 @@ namespace S8Console.GUI
                 CommandButton?.Invoke("RESET");
             };
 
-        }
-
-        private void RunButton_Clicked()
-        {
-            throw new NotImplementedException();
-        }
+        }        
     }
 }

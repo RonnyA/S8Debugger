@@ -16,7 +16,17 @@ namespace S8Console.GUI
         private List<string> _asms = new List<string>();
         S8CommandParser _parser;
 
-        
+        bool _isEnabled;
+
+
+        public bool Enabled {
+            get {
+                return _isEnabled;
+            }
+            set {
+                _isEnabled = value;
+            }
+        }
 
         public AsmView(S8CommandParser parser)
         {
@@ -35,24 +45,26 @@ namespace S8Console.GUI
 
         public void refreshUI(UInt16 pc)
         {
-            if (pc == 0)
+            if (_isEnabled)
             {
-                _asms.Clear();
-                _asms.AddRange(_parser.s8d.DissasembleToList(0, 0xFFF, _parser.showAddress, false));
-            }
+                if ((pc == 0) | (_asms.Count == 0))
+                {
+                    _asms.Clear();
+                    _asms.AddRange(_parser.s8d.DissasembleToList(0, 0xFFF, _parser.showAddress, false));
+                }
 
-            var lines = this.Height;
+                var lines = this.Height;
 
-            try
-            {
-                this.SelectedItem = pc / 2;
-            }
-            catch (Exception)
-            {
+                try
+                {
+                    this.SelectedItem = pc / 2;
+                }
+                catch (Exception)
+                {
 
-                // i am confused, I lost track of my lines..
-            }
-            
+                    // i am confused, I lost track of my lines..
+                }
+            }            
         }
     }
 }

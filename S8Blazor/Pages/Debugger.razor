@@ -1,0 +1,201 @@
+﻿@page "/Debugger"
+@inject IS8Service s8service
+@implements IDisposable
+
+<div class="alert alert-primary" role="alert">
+    SLEDE8 Dissasembler and debugger
+</div>
+
+<div class="form-group">
+    <input class="form-control" id="Input" @bind="@input" placeholder="Input" />
+</div>
+<br />
+
+<table width="100%" style="table-layout:fixed;">
+    <tbody>
+        <tr>
+            <td width="70%">
+                <MonacoEditor @ref="_dbg_editor" Id="s8debugger" ConstructionOptions="EditorConstructionOptions" OnDidInit="EditorOnDidInit" OnContextMenu="OnContextMenu" />
+            </td>
+            <td width="30%">
+                <CpuStateView cpuState="@s8service.Parser.s8d.cpu.state"></CpuStateView>
+            </td>
+        </tr>
+    </tbody>
+</table>
+
+
+<br />
+<br />
+
+<textarea style="width: 100%; max-width: 100%;" readonly @bind="@Output" rows="10"></textarea>
+<br />
+<br />
+<button class="btn btn-primary" @onclick="RunCode">Run</button>
+<button class="btn btn-secondary" @onclick="StepCode">Step</button>
+<button class="btn btn-danger" @onclick="ResetCode">Reset</button>
+
+@code
+{
+        string _input;
+    private MonacoEditor _dbg_editor { get; set; }
+
+    string asmCode = string.Empty;
+
+    string Assembly = string.Empty;
+    string Output = string.Empty;
+    string Command = string.Empty;
+    private int _currentLine = -1;
+
+    public string input
+    {
+        get { return _input; }
+        set { _input = value; s8service.Parser.s8d.SetInputFromHexString(_input); }
+    }
+
+    #region Initialize and clean up
+
+    protected override async Task OnInitializedAsync()
+    {
+        s8service.Parser.s8d.cpu.CpuStepHandler += CpuStepLineHandler;
+    }
+
+    public void Dispose()
+    {
+        // Clean up hooked event handlers
+        s8service.Parser.s8d.cpu.CpuStepHandler -= CpuStepLineHandler;
+    }
+
+    #endregion Initialize and clean up
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+
+        if (!firstRender)
+        {
+
+            await SetLineFocus(_currentLine,_dbg_editor);
+        }
+
+        //return base.OnAfterRenderAsync(firstRender);
+    }
+
+    private void CpuStepLineHandler(object sender, CpuStepInfo cpustep)
+    {
+        _currentLine = (cpustep.pc / 2) + 1;
+        //SetLineFocus(_currentLine);
+    }
+
+    private string[] decorationIds;
+
+    // Set active debugging line in editor
+    internal async Task SetLineFocus(int sourceCodeLine, MonacoEditor editor)
+    {
+        Console.WriteLine($"Stepping to {sourceCodeLine}");
+
+        await editor.ResetDeltaDecorations(); // remove other decorations
+        await editor.ResetDeltaDecorations(); // remove other decorations - 2nd call. It seems there is a bug that make decorations hang lingering around sometimes
+
+        if (sourceCodeLine < 0) return;
+
+        var newDecorations = new ModelDeltaDecoration[]
+               {
+                new ModelDeltaDecoration
+                {
+                    Range = new BlazorMonaco.Bridge.Range(sourceCodeLine,1,sourceCodeLine,1),
+                    Options = new ModelDecorationOptions
+                    {
+                        IsWholeLine = true,
+                        ClassName = "decorationContentClass",
+                        GlyphMarginClassName = "decorationGlyphMarginClass"
+                    }
+                }
+                };
+
+        // Scroll
+        await editor.RevealLine(sourceCodeLine);
+
+        //decorationIds = AsyncHelper.RunSync<string[]>(() => _editor.DeltaDecorations(null, newDecorations));
+        decorationIds = await editor.DeltaDecorations(decorationIds, newDecorations);
+        // You can now use 'decorationIds' to change or remove the decorations
+    }
+
+
+
+    private async Task StepCode()
+    {
+        if (s8service.Parser.s8d.cpu.state.crashed)
+        {
+            Output += "Program is stopped\r\n";
+            return;
+        }
+
+        s8service.ClearOutput();
+
+        if (_currentLine<0) //first time we enter here, the cpu may need a reset
+        {
+            s8service.Parser.ParseCommand("RESET");
+            Output = s8service.GetOutput();
+        }
+
+        _currentLine = 1;
+        await SetLineFocus(_currentLine,_dbg_editor);
+
+        s8service.Parser.ParseCommand("STEP");
+        Output = s8service.GetOutput();
+    }
+
+    private async Task ResetCode()
+    {
+        _currentLine = 1;
+        // Refresh dissasmbled code (in case it was edited)
+        asmCode = s8service.GetDissasmbledCode();
+        await _dbg_editor.SetValue(asmCode);
+
+        s8service.ClearOutput();
+        s8service.Parser.ParseCommand("RESET");
+        Output = s8service.GetOutput();
+    }
+
+
+    private async Task RunCode()
+    {
+
+        s8service.ClearOutput();
+        s8service.Parser.ParseCommand("RUN!");
+        Output = s8service.GetOutput();
+    }
+
+
+    private StandaloneEditorConstructionOptions EditorConstructionOptions(MonacoEditor editor)
+    {
+        return new StandaloneEditorConstructionOptions
+        {
+            AutomaticLayout = false,
+            Language = "ASM", //SLEDE8
+            LineNumbers = "off",
+            ReadOnly = true,
+            Value = asmCode
+        };
+    }
+
+    private async Task EditorOnDidInit(MonacoEditorBase editor)
+    {
+        asmCode = s8service.GetDissasmbledCode();
+
+        await _dbg_editor.SetValue(asmCode);
+
+        await _dbg_editor.AddCommand((int)KeyMode.CtrlCmd | (int)KeyCode.KEY_H, (editor, keyCode) =>
+        {
+            Console.WriteLine("Ctrl+H : Initial editor command is triggered.");
+        });
+    }
+
+
+
+    private void OnContextMenu(EditorMouseEvent eventArg)
+    {
+        Console.WriteLine("OnContextMenu : " + System.Text.Json.JsonSerializer.Serialize(eventArg));
+    }
+
+}

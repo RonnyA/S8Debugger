@@ -1,0 +1,118 @@
+﻿@page "/Upload"
+@inject IS8Service s8service
+@using System.ComponentModel.DataAnnotations
+@using System.IO
+@using System.Linq
+@using System.Threading
+@implements IDisposable
+
+<div class="alert alert-primary" role="alert">
+    SLEDE8 Upload S8 binary    
+</div>
+
+<EditForm Model="uploadModel" OnValidSubmit="OnSubmit">
+    <InputFile class="form-control" id="file" OnChange="OnInputFileChange" />
+
+    @{
+        var progressCss = "progress " + (displayProgress ? "" : "d-none");
+        var progressWidthStyle = progressPercent + "%";
+    }
+    <div class="@progressCss">
+        <div class="progress-bar" role="progressbar" style="width:@progressWidthStyle" area-valuenow="@progressPercent" aria-minvalue="0" aria-maxvalue="100"></div>
+    </div>
+    <br />
+    <br />
+
+    <button type="submit" class="btn btn-success"><span class="oi oi-data-transfer-upload"></span>Upload</button>
+</EditForm>
+
+
+<br />
+<br />
+
+<textarea style="width: 100%; max-width: 100%;" readonly @bind="@output" rows="10"></textarea>
+
+
+@code {
+    private IBrowserFile browserFile { get; set; }
+    private bool displayProgress;
+    private int progressPercent;
+    private CancellationTokenSource cancelation;
+    string UploadStatus = string.Empty;
+    FileUploadModel uploadModel = new FileUploadModel();
+    string output = string.Empty;
+
+    protected override void OnInitialized()
+    {
+        cancelation = new CancellationTokenSource();
+    }
+
+
+    private void OnInputFileChange(InputFileChangeEventArgs eventArgs)
+    {
+        browserFile = eventArgs.File;
+        StateHasChanged();
+    }
+
+
+    private async Task OnSubmit()
+    {
+        output = string.Empty;
+
+        if (browserFile is null)
+        {
+            output = "No file selected!";
+            return;
+        }
+
+        if (browserFile.Size > 4096)
+        {
+            output = $"File {browserFile.Name}, is to big. Its {browserFile.Size} bytes. Max is 4096 bytes";
+            return;
+        }
+
+
+        var buffer = new byte[browserFile.Size];
+        int bytesRead;
+        double totalRead = 0;
+
+        displayProgress = true;
+
+        var readStream = browserFile.OpenReadStream();
+        MemoryStream memStream = new MemoryStream();
+
+        while ((bytesRead = await readStream.ReadAsync(buffer, cancelation.Token)) != 0)
+        {
+            totalRead += bytesRead;
+            await memStream.WriteAsync(buffer, cancelation.Token);
+
+            progressPercent = (int)((totalRead / browserFile.Size) * 100);
+            StateHasChanged();
+        }
+
+        displayProgress = false;
+
+        s8service.ClearOutput();
+
+        bool initResult = s8service.Parser.s8d.InitExeFromMemory(memStream.ToArray());
+
+        s8service.Parser.SourceFileHash = 0; //clear the hash, forcing the Source view to re-assembly first time code is run there.
+
+        //output = $"Uploaded {browserFile.Name}, {browserFile.Size} bytes. Debugger initialized {initResult}";
+
+        output = s8service.GetOutput();
+    }
+
+
+    public void Dispose()
+    {
+        cancelation.Cancel();
+    }
+
+    public class FileUploadModel
+    {
+        [Required]
+        [StringLength(255, ErrorMessage = "Name is too long.")]
+        public string FileName { get; set; }
+    }
+}

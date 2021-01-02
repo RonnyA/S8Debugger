@@ -1,0 +1,44 @@
+﻿@page "/VGA"
+@using Blazor.Extensions;
+@using Blazor.Extensions.Canvas
+@using Blazor.Extensions.Canvas.Canvas2D;
+@inject IS8Service s8service
+
+<BECanvas Width="512" Height="512" @ref="_canvasReference"></BECanvas>
+<br />
+<br />
+
+<textarea class="width" readonly @bind="@output" cols="60" rows="10"></textarea>
+<br />
+<br />
+<button class="btn btn-primary" @onclick="RunCode">Run</button>
+@code {
+    public string output { get; set; }
+
+    private Canvas2DContext _context;
+
+    protected BECanvasComponent _canvasReference;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        this._context = await this._canvasReference.CreateCanvas2DAsync();
+        await this._context.SetFillStyleAsync("blue");
+
+        await this._context.FillRectAsync(0, 0, 512, 512);
+
+        await this._context.SetFillStyleAsync("black");
+        await this._context.SetFontAsync("38px Calibri");
+        await this._context.StrokeTextAsync("VGA Screen for SLEDE8", 5, 100);
+    }
+
+    #region RUN CODE
+    private async Task RunCode()
+    {
+        s8service.ClearOutput();
+
+        s8service.Parser.ParseCommand("RUN!");
+
+        output = s8service.GetOutput();
+    }
+    #endregion RUN CODE
+}

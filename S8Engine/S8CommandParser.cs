@@ -21,39 +21,28 @@ namespace S8Debugger
         #region Source Code
 
         string _sourceCode = string.Empty;
-        public void SetSourceCode(string sourceCode)
+        /// <summary>
+        /// Store SLEDE source code into shared storage for S8ENGINE
+        /// </summary>
+        /// <param name="sourceCode"></param>
+        /// <returns>TRUE if the source was changed. FALSE if the source was unchanged</returns>
+        public bool SetSourceCode(string sourceCode)
         {
+            var newHash = sourceCode.GetHashCode();
+            if (newHash == SourceFileHash) return false; // if src not changed, do nothing
+
             _sourceCode = sourceCode;
+            SourceFileHash = newHash;
 
-            SourceFileMD5 = CreateMD5(_sourceCode);
+            return true;
         }
 
-        public string CreateMD5(string input)
-        {
-            if (string.IsNullOrEmpty(input)) return "";
-
-            // Use input string to calculate MD5 hash
-            using (System.Security.Cryptography.MD5 md5 = System.Security.Cryptography.MD5.Create())
-            {
-                byte[] inputBytes = System.Text.Encoding.ASCII.GetBytes(input);
-                byte[] hashBytes = md5.ComputeHash(inputBytes);
-
-                // Convert the byte array to hexadecimal string
-                StringBuilder sb = new StringBuilder();
-                for (int i = 0; i < hashBytes.Length; i++)
-                {
-                    sb.Append(hashBytes[i].ToString("X2"));
-                }
-                return sb.ToString();
-            }
-        }
-
-        public string  GetSourceCode()
+        public string GetSourceCode()
         {
             return _sourceCode;
         }
 
-        public string SourceFileMD5 { get; set; }
+        public int SourceFileHash { get; set; }
         public string SourceFileName { get; set; }
 
         #endregion
@@ -177,7 +166,7 @@ namespace S8Debugger
 
                         }
                         break;
-                   
+
                     case "ASM!": //Assemble file (for validation only)
                         if (cmd.Length > 1)
                         {
@@ -205,7 +194,7 @@ namespace S8Debugger
 
                                 LogMessage("Assembly failed, ex = " + ex.ToString());
                             }
-                            
+
                         }
                         break;
 
@@ -241,7 +230,6 @@ namespace S8Debugger
                         }
                         break;
 
-
                     case "LOAD":
                         if (cmd.Length > 1)
                         {
@@ -272,7 +260,7 @@ namespace S8Debugger
 
                                     SourceFileName = string.Empty;
                                     SetSourceCode(string.Empty);
-                                    SourceFileMD5 = string.Empty;
+                                    SourceFileHash = 0;
 
                                     if (!s8d.Init(fname))
                                     {
@@ -330,7 +318,7 @@ namespace S8Debugger
 
                     case "R":
                     case "RUN":
-                        if (GetSourceCode().Length >0)
+                        if (GetSourceCode().Length > 0)
                         {
                             AssembleSourceCode();
                         }
@@ -409,7 +397,7 @@ namespace S8Debugger
 
         }
 
-        private void AssembleSourceCode()
+        public void AssembleSourceCode()
         {
             string src = GetSourceCode();
 
@@ -499,7 +487,58 @@ Q   - Quit";
         }
         public void PrintHelp()
         {
-            LogMessage(GetCommands());            
+            LogMessage(GetCommands());
+        }
+
+
+        public string GetSampleSourceCode()
+        {
+            return
+@"SETT r10, 0
+SETT r11, 1
+
+NOPE
+NOPE
+NOPE ; på neste linje er det et punkt til ettertanke!
+NOPE ;!
+NOPE 
+NOPE
+
+TUR skriv_hilsen ; kaller 'funksjonen' skriv_hilsen
+TUR endre_første_bokstav_til_små_versaler
+TUR skriv_hilsen
+STOPP
+
+en_liten_hilsen:
+.DATA 72,105,108,115,101,110,32,102,114,97,32,84,97,115,116,101,102,105,110,103,101,114,10,0
+
+
+skriv_hilsen:
+FINN en_liten_hilsen ; skriv addressen til labelen 'en_liten_hilsen' til r0 og r1
+
+skriv_neste_verdi:
+LAST r2       ; last verdien som blir pekt på inn i r2
+LIK r2, r10   ; hvis verdien er lik 0 avslutter vi
+BHOPP skriv_hilsen_fullført
+SKRIV r2
+PLUSS r0, r11 ; legg 1 til r0, slik at vi nå peker på neste verdi i dataen
+              ; OBS! hvis vi gjør dette og r0 går fra 0xFF->0x00 må vi plusse på 1
+              ; i registeret r1  (0xFF + 0x01 = 0x100). Det håndteres ikke her
+HOPP skriv_neste_verdi
+
+skriv_hilsen_fullført:
+RETUR
+
+
+
+endre_første_bokstav_til_små_versaler:
+FINN en_liten_hilsen
+LAST r2         ; r2 = 72 ('H')
+SETT r3, 0x20   ; 
+PLUSS r2, r3    ; r2 = 'h'
+LAGR r2         ; skriv verdien i r2 tilbake til adressen som r0 og r1 peker på
+RETUR
+";
         }
 
         #endregion Helper Functions

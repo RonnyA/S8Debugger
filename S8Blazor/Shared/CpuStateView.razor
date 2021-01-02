@@ -1,0 +1,55 @@
+﻿<h1>CPU State</h1>
+<section>    
+    <div>
+        <table class="table table-bordered table-sm table-active" width="300px">
+            <tbody>
+                <tr>
+                    <th>flag</th>
+                    <td colspan="1" class="table-light">
+                        <span>@cpuState.flag.ToString()</span>
+                    </td>
+
+                    <th>State</th>
+                    @{  if (cpuState.crashed) { state = "Stopped"; } else { state = "Running"; } }
+                       <td colspan="1" class="table-light">
+                        <span>@state</span>
+                    </td>
+
+                </tr>
+                <tr>
+                    <th>pc</th>
+                    <td colspan="1" class="table-light">
+                        <span>@cpuState.pc.ToString("X3")</span>
+                    </td>
+                    <th>tick</th>                    
+                    <td colspan="1" class="table-light">
+                        <span>@cpuState.tick</span>/<span>@cpuState.maxTicks</span>
+                    </td>
+
+                </tr>
+                <tr><td colspan="4"></td></tr>
+
+                @for(int i=0;i<8;i++)
+                {
+                    string h1 = $"r{i}";
+                    string h2 = $"r{i+8}";
+                    <tr>
+                    <th>@h1</th><td class="table-light"><span>@cpuState.regs[i].ToString("X2")</span></td>
+                    <th>@h2</th><td class="table-light"><span>@cpuState.regs[i+8].ToString("X2")</span></td>
+                </tr>
+                }
+                
+            </tbody>
+        </table>
+    </div>
+</section>
+
+
+@code {
+
+    string state = string.Empty;
+
+    [Parameter]
+    public S8Debugger.CpuState cpuState { get; set; }
+}
+

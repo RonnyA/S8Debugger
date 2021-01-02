@@ -85,27 +85,40 @@ namespace S8Console.GUI
 
         static void SetViewSource()
         {
+
+            // ASM view: Hide, No Focous, Disable S8 Event processing
             asmFrameView.Visible = false;
             asmFrameView.CanFocus = false;
 
+            asmLinesView.Enabled = false;
 
+
+            // Source view: Visible, Focous, Enable S8 Event processing
+            // srcLines is inside srcFrame
             srcFrameView.Visible = true;
-
             srcFrameView.CanFocus = true;
-            srcLinesView.CanFocus = true;
-
+            srcLinesView.Visible = true;
+            srcLinesView.CanFocus = true;            
+            srcLinesView.Enabled = true;
             srcLinesView.SetFocus();
         }
 
         static void SetViewAsm()
         {
+            // Source view: Hide, No Focous, Disable S8 Event processing
             srcFrameView.Visible = false;
             srcFrameView.CanFocus = false;
+            srcLinesView.Visible = false;
+            srcLinesView.CanFocus = false;
+            srcLinesView.Enabled = false;
 
+
+            // Source view: Visible, Focous, Enable S8 Event processing
             asmFrameView.Visible = true;
             asmFrameView.CanFocus = true;
+            asmLinesView.Enabled = true;
 
-            asmFrameView.SetFocus();
+            asmLinesView.SetFocus();
         }
 
 
@@ -416,8 +429,8 @@ namespace S8Console.GUI
                 if (src.Length > 0)
                 {
 
-                    var md5 = s8parser.CreateMD5(src);
-                    if ((md5 != s8parser.SourceFileMD5) | (obj == "RUN!"))
+                    var hashCode = src.GetHashCode();
+                    if ((hashCode != s8parser.SourceFileHash) | (obj == "RUN!"))
                     {
                         // Source code in editor different from stored version. Compile!!
 

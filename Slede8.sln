@@ -7,6 +7,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "S8Engine", "S8Engine\S8Engi
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "S8Console", "S8Console\S8Console.csproj", "{CD733C94-2C64-4548-81E0-702929C08067}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "S8Blazor", "S8Blazor\S8Blazor.csproj", "{D84E17E1-FDBF-4361-8B29-4715F03F0E90}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{CD733C94-2C64-4548-81E0-702929C08067}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CD733C94-2C64-4548-81E0-702929C08067}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{CD733C94-2C64-4548-81E0-702929C08067}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D84E17E1-FDBF-4361-8B29-4715F03F0E90}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D84E17E1-FDBF-4361-8B29-4715F03F0E90}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D84E17E1-FDBF-4361-8B29-4715F03F0E90}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D84E17E1-FDBF-4361-8B29-4715F03F0E90}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -211,7 +211,7 @@ namespace S8Debugger
         {
             SourceMap map = new SourceMap();
             UInt16 address = 0;
-            UInt16 lineNo = 0;
+            UInt16 lineNo = 1; // First source code line is #1
             var all_lines = sourceCode.Split("\n");
             foreach (var current in all_lines)
             {
