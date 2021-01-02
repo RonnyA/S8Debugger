@@ -81,10 +81,12 @@ namespace S8Debugger
             public List<string> args = new List<string>();
 
 
-            internal void ensureNoArgs()
+            internal string ensureNoArgs()
             {
                 if (args.Count > 0)
                     throw new S8AssemblerException(ERROR_MESSAGE[(int)ERROR_MESSAGE_ID.expectedNoArguments].Replace("{extra}", $"{this.opCode} ${this.args}"), LineNo);
+
+                return "";
             }
 
             internal string singleArg()
@@ -316,9 +318,8 @@ namespace S8Debugger
 
             switch (instruction.opCode)
             {
-                case "STOPP":
-                    instruction.ensureNoArgs();
-                    returnCode= writeHalt();
+                case "STOPP":                    
+                    returnCode= writeHalt(instruction.ensureNoArgs());
                     break;
                 case "SETT":
                     returnCode= writeSet(instruction.twoArguments());
@@ -334,7 +335,15 @@ namespace S8Debugger
                 case "LAGR":
                     returnCode = writeStore(instruction.singleArg());
                     break;
+#if _EXPERIMENTAL_
+                case "VLAST":
+                    returnCode = writeVLoad(instruction.singleArg());
+                    break;
+                case "VLAGR":
+                    returnCode = writeVStore(instruction.singleArg());
+                    break;
 
+#endif
                 // ALU
                 case "OG":
                 case "ELLER":
@@ -355,6 +364,20 @@ namespace S8Debugger
                 case "SKRIV":
                     returnCode= writeWrite(instruction.singleArg());
                     break;
+
+#if _EXPERIMENTAL_
+                case "INN":
+                    returnCode = writeIORead(instruction.singleArg());
+                    break;
+
+                case "UT":
+                    returnCode = writeIOWrite(instruction.singleArg());
+                    break;
+
+                case "VSYNK":                    
+                    returnCode = writeVSync(instruction.ensureNoArgs());
+                    break;                    
+#endif
 
                 // CMP
                 case "LIK":
@@ -379,14 +402,12 @@ namespace S8Debugger
                     returnCode = writeCall(instruction.singleArg(), labels);
                     break;
 
-                case "RETUR":
-                    instruction.ensureNoArgs();
-                    returnCode = writeRet();
+                case "RETUR":                    
+                    returnCode = writeRet(instruction.ensureNoArgs());
                     break;
 
-                case "NOPE":
-                    instruction.ensureNoArgs();
-                    returnCode = writeNop();
+                case "NOPE":                    
+                    returnCode = writeNop(instruction.ensureNoArgs());
                     break;
 
                 default:
@@ -576,7 +597,7 @@ namespace S8Debugger
             return address;
         }
         #region Write byte for instructions
-        UInt16 writeHalt()
+        UInt16 writeHalt(string arg)
         {
             return (UInt16)(0);
         }
@@ -615,11 +636,29 @@ namespace S8Debugger
             return nibs(4, 0, regNum, 0);
         }
 
+
         UInt16 writeStore(string reg)
         {
             byte regNum = getReg(reg);
             return nibs(4, 1, regNum, 0);
         }
+
+#if _EXPERIMENTAL_
+        //VLAST = 4, subcode 2
+        UInt16 writeVLoad(string regStr)
+        {
+            byte regNum = getReg(regStr);
+            return nibs(4, 2, regNum, 0);
+        }
+
+        //VLAGR = 4, subcode 3
+        UInt16 writeVStore(string reg)
+        {
+            byte regNum = getReg(reg);
+            return nibs(4, 3, regNum, 0);
+        }
+#endif
+
 
         UInt16 writeAlu(byte aluOp, string[] args)
         {
@@ -646,7 +685,30 @@ namespace S8Debugger
             byte regNum = getReg(reg);
             return nibs(6, 1, regNum, 0);
         }
+#if _EXPERIMENTAL_
+        // IO routines. INN = subcode 2
+        UInt16 writeIORead(string arg)
+        {
+            string reg = arg.Trim();
+            byte regNum = getReg(reg);
+            return nibs(6, 2, regNum, 0);
+        }
 
+        // IO routines. UT = subcode 3
+        UInt16 writeIOWrite(string arg)
+        {
+            string reg = arg.Trim();
+            byte regNum = getReg(reg);
+            return nibs(6, 3, regNum, 0);
+        }
+
+        // IO routines. VGA VSYNC = subcode 4
+        UInt16 writeVSync(string arg)
+        {                        
+            return nibs(6, 4, 0, 0);
+        }
+
+#endif
         UInt16 writeCmp(byte cmpOp, string[] args)
         {
             string reg1 = args[0];
@@ -668,12 +730,12 @@ namespace S8Debugger
             return nibVal(0xa, getAddr(arg, labels));
         }
 
-        UInt16 writeRet()
+        UInt16 writeRet(string arg)
         {
             return (UInt16)0xb;
         }
 
-        UInt16 writeNop()
+        UInt16 writeNop(string arg)
         {
             return (UInt16)0xc;
         }

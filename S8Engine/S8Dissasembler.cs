@@ -342,6 +342,12 @@ namespace S8Debugger
             return ConvertByteArray2HexString(cpu.state.stdin);
         }
 
+        // Force running CPU to stop
+        public void Stop()
+        {
+            cpu.Stop();
+        }
+
 
         public void SetMaxTicks(int Ticks)
         {
