@@ -8,6 +8,11 @@ A big part of this code is a C# implementation of the TypeScript version created
 Copyright (c) 2020 Politiets sikkerhetstjeneste
 * License: https://github.com/PSTNorge/slede8/blob/main/LICENSE
 
+The VGA (Experimental code) part of this is refactored from Julebokk
+https://github.com/julebokk/slede8dbg/commit/1b91f2af48060c53f04f761521d37c78962549ca
+
+The Blazor/Javascript code to update the VGA UI is borrowed and refactored from
+https://github.com/EngstromJimmy/ZXSpectrum
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

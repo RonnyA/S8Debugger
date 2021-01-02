@@ -133,6 +133,7 @@ namespace S8Debugger
         public void SetMaxTicks(int Ticks)
         {
             state.maxTicks = Ticks;
+            state.tick = 0; //reset tick counter also
 
         }
 
@@ -391,8 +392,7 @@ namespace S8Debugger
                         break;
                     case 3: //VLAGR
                         UInt16 hwaddr = GetFrameBufferAddress();
-
-                        state.HWDisplay.Memory[hwaddr] = (byte)state.regs[instr.argument1];
+                        state.HWDisplay.Write(hwaddr, (byte)state.regs[instr.argument1]);
                         break;
 #endif
                     default:

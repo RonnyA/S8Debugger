@@ -13,6 +13,35 @@
 </head>
 
 <body>
+    <script>
+        var lastcall = performance.now()
+
+        var canvas;
+        var context;
+        var imageData;
+        window.InitCanvas = function InitCanvas() {
+
+            canvas = document.getElementById('vgaCanvas');
+            context = canvas.getContext('2d');
+            context.mozImageSmoothingEnabled = false;
+            context.webkitImageSmoothingEnabled = false;
+            context.msImageSmoothingEnabled = false;
+            context.imageSmoothingEnabled = false;
+            imageData = context.createImageData(256, 256);
+            console.log(imageData)
+            return true;
+        }
+
+        window.PaintCanvas = function PaintCanvas(dataPtr) {
+            imageData.data.set(Uint8ClampedArray.from(Module.HEAPU8.subarray(dataPtr, dataPtr + imageData.data.length)));
+            context.putImageData(imageData, 0, 0);
+            context.drawImage(canvas, 0, 0, canvas.width, canvas.height);
+            console.log((performance.now() - lastcall).toFixed(2));
+            lastcall = performance.now();
+            return true;
+        }
+    </script>
+
     <div id="app">Loading...</div>
 
     <div id="blazor-error-ui">

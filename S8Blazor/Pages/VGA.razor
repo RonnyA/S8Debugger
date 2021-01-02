@@ -1,44 +1,90 @@
 ﻿@page "/VGA"
-@using Blazor.Extensions;
-@using Blazor.Extensions.Canvas
-@using Blazor.Extensions.Canvas.Canvas2D;
 @inject IS8Service s8service
+@implements IDisposable
+@inherits VGAModel
 
-<BECanvas Width="512" Height="512" @ref="_canvasReference"></BECanvas>
+<h3>VGA</h3>
+
+<canvas id="vgaCanvas" width="256" height="256"></canvas>
+
 <br />
 <br />
 
-<textarea class="width" readonly @bind="@output" cols="60" rows="10"></textarea>
+<textarea class="width" readonly @bind="@output" cols="60" rows="5"></textarea>
 <br />
 <br />
 <button class="btn btn-primary" @onclick="RunCode">Run</button>
+<button class="btn btn-warning" @onclick="StopCode">Stop</button>
+
+<button class="btn btn-danger" @onclick="LoadSampleCode">Load Sample Code</button>
+
 @code {
     public string output { get; set; }
+    
 
-    private Canvas2DContext _context;
-
-    protected BECanvasComponent _canvasReference;
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        this._context = await this._canvasReference.CreateCanvas2DAsync();
-        await this._context.SetFillStyleAsync("blue");
-
-        await this._context.FillRectAsync(0, 0, 512, 512);
-
-        await this._context.SetFillStyleAsync("black");
-        await this._context.SetFontAsync("38px Calibri");
-        await this._context.StrokeTextAsync("VGA Screen for SLEDE8", 5, 100);
-    }
-
-    #region RUN CODE
     private async Task RunCode()
     {
         s8service.ClearOutput();
+        //s8service.Parser.s8d.SetMaxTicks(int.MaxValue);
+        //s8service.Parser.s8d.SetMaxTicks(2000000);
+        //s8service.Parser.ParseCommand("RUN!");        
+        //output = s8service.GetOutput();
 
-        s8service.Parser.ParseCommand("RUN!");
-
-        output = s8service.GetOutput();
+        this.Running = true;
+        output ="Running";
     }
-    #endregion RUN CODE
+
+
+    private async Task StopCode()
+    {
+        //s8service.Parser.s8d.Stop();
+        this.Running = false;
+        output ="Stopped";
+    }
+
+    private async Task LoadSampleCode()
+    {
+        string src = getSampleCode();
+        s8service.Parser.SetSourceCode(src);
+        s8service.Parser.AssembleSourceCode();
+    output ="Ready";
+    }
+    
+    private string getSampleCode()
+    {
+return @"
+; SLEDE8++ is an extended version of SLEDE8 computer. It is equipped
+; with an experimental VGA graphics chip. VGA was named after the
+; initials of the three NPST employees working on the project:
+; Vegard, Gunnar and Adrian (it was later revealed that Vegard's
+; real name was Vladimir; he was fired for breaching the non-compete
+; agreement).
+;
+; Source : JuleBokk @ https://github.com/julebokk/slede8dbg/commit/1b91f2af48060c53f04f761521d37c78962549ca
+;
+
+    SETT r11, 1
+
+loop:
+    SETT r5, r0
+    PLUSS r5, r4
+    SETT r6, r1
+    PLUSS r6, r4
+    XELLER r5, r6
+ 
+    VLAGR r5
+    
+    PLUSS r0, r11
+    ULIK r0, r10
+    BHOPP loop
+    PLUSS r1, r11
+    ULIK r1, r10
+    BHOPP loop
+    
+    VSYNK
+    
+    PLUSS r4, r11
+    HOPP loop
+";
+    }
 }

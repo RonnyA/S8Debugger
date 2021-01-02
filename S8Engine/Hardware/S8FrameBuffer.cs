@@ -1,19 +1,27 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
+using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
 
 #if _EXPERIMENTAL_
 namespace S8Debugger.Hardware
-{    
+{
     public class S8FrameBuffer
     {
-        const int MEMORY_SIZE = 65536;
+        const int MEMORY_SIZE = 262144;
 
         public event Action<bool> OnVSync;
 
         public byte[] Memory = new byte[MEMORY_SIZE];
+
+        Color[] defaultVGAPalette = VGAPalette.GetDefaultVGAPalette();
+
+        //CTOR
+      
+
 
         public byte Read(UInt16 addr)
         {
@@ -21,7 +29,14 @@ namespace S8Debugger.Hardware
         }
         public void Write(UInt16 addr, byte value)
         {
-            Memory[addr] = value;
+            int memoryAddr = addr * 4;
+
+            Color c = defaultVGAPalette[value];
+
+            Memory[memoryAddr++] = c.R;
+            Memory[memoryAddr++] = c.G;
+            Memory[memoryAddr++] = c.B;
+            Memory[memoryAddr++] = c.A;
         }
 
         public void VSync()
