@@ -37,8 +37,10 @@
 
 @code
 {
-    string _input;
+        string _input;
     private MonacoEditor _dbg_editor { get; set; }
+
+    string asmCode = string.Empty;
 
     string Assembly = string.Empty;
     string Output = string.Empty;
@@ -52,15 +54,12 @@
     }
 
     #region Initialize and clean up
-    protected override void OnInitialized()
+
+    protected override async Task OnInitializedAsync()
     {
         s8service.Parser.s8d.cpu.CpuStepHandler += CpuStepLineHandler;
     }
 
-    protected override async Task OnInitializedAsync()
-    {
-    }
-  
     public void Dispose()
     {
         // Clean up hooked event handlers
@@ -71,10 +70,13 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+
         if (!firstRender)
         {
+
             await SetLineFocus(_currentLine,_dbg_editor);
         }
+
         //return base.OnAfterRenderAsync(firstRender);
     }
 
@@ -122,17 +124,23 @@
 
     private async Task StepCode()
     {
+        if (s8service.Parser.s8d.cpu.state.crashed)
+        {
+            Output += "Program is stopped\r\n";
+            return;
+        }
+
         s8service.ClearOutput();
 
         if (_currentLine<0) //first time we enter here, the cpu may need a reset
-        {             
+        {
             s8service.Parser.ParseCommand("RESET");
-            Output = s8service.GetOutput();        
+            Output = s8service.GetOutput();
         }
 
-        _currentLine = 1;        
+        _currentLine = 1;
         await SetLineFocus(_currentLine,_dbg_editor);
-                
+
         s8service.Parser.ParseCommand("STEP");
         Output = s8service.GetOutput();
     }
@@ -141,9 +149,9 @@
     {
         _currentLine = 1;
         // Refresh dissasmbled code (in case it was edited)
-        var src = GetDissasmbledCode();
-        await _dbg_editor.SetValue(src);
-        
+        asmCode = s8service.GetDissasmbledCode();
+        await _dbg_editor.SetValue(asmCode);
+
         s8service.ClearOutput();
         s8service.Parser.ParseCommand("RESET");
         Output = s8service.GetOutput();
@@ -158,30 +166,27 @@
         Output = s8service.GetOutput();
     }
 
-    string GetDissasmbledCode()
-    {
-        var asm = s8service.Parser.s8d.DissasembleToList(0, 0xFFF, s8service.Parser.showAddress, false);
-        return string.Join(Environment.NewLine, asm);
-    }
 
     private StandaloneEditorConstructionOptions EditorConstructionOptions(MonacoEditor editor)
     {
-        string src = GetDissasmbledCode();
-
         return new StandaloneEditorConstructionOptions
         {
             AutomaticLayout = false,
             Language = "ASM", //SLEDE8
             LineNumbers = "off",
             ReadOnly = true,
-            Value = src
-        };        
+            Value = asmCode
+        };
     }
 
     private async Task EditorOnDidInit(MonacoEditorBase editor)
     {
+        asmCode = s8service.GetDissasmbledCode();
+
+        await _dbg_editor.SetValue(asmCode);
+
         await _dbg_editor.AddCommand((int)KeyMode.CtrlCmd | (int)KeyCode.KEY_H, (editor, keyCode) =>
-            {
+        {
             Console.WriteLine("Ctrl+H : Initial editor command is triggered.");
         });
     }

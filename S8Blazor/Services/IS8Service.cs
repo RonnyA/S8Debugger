@@ -12,5 +12,6 @@ namespace S8Blazor.Services
 
         string GetOutput();
         void ClearOutput();
+        string GetDissasmbledCode();
     }
 }

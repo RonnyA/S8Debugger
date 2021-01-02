@@ -8,12 +8,24 @@
                     <td colspan="1" class="table-light">
                         <span>@cpuState.flag.ToString()</span>
                     </td>
+
+                    <th>State</th>
+                    @{  if (cpuState.crashed) { state = "Stopped"; } else { state = "Running"; } }
+                       <td colspan="1" class="table-light">
+                        <span>@state</span>
+                    </td>
+
                 </tr>
                 <tr>
                     <th>pc</th>
                     <td colspan="1" class="table-light">
                         <span>@cpuState.pc.ToString("X3")</span>
                     </td>
+                    <th>tick</th>                    
+                    <td colspan="1" class="table-light">
+                        <span>@cpuState.tick</span>/<span>@cpuState.maxTicks</span>
+                    </td>
+
                 </tr>
                 <tr><td colspan="4"></td></tr>
 
@@ -34,7 +46,9 @@
 
 
 @code {
-  
+
+    string state = string.Empty;
+
     [Parameter]
     public S8Debugger.CpuState cpuState { get; set; }
 }

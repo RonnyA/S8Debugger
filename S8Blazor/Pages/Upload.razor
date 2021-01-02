@@ -7,8 +7,7 @@
 @implements IDisposable
 
 <div class="alert alert-primary" role="alert">
-    SLEDE8 Upload S8 binary
-    @UploadStatus
+    SLEDE8 Upload S8 binary    
 </div>
 
 <EditForm Model="uploadModel" OnValidSubmit="OnSubmit">
@@ -21,17 +20,27 @@
     <div class="@progressCss">
         <div class="progress-bar" role="progressbar" style="width:@progressWidthStyle" area-valuenow="@progressPercent" aria-minvalue="0" aria-maxvalue="100"></div>
     </div>
+    <br />
+    <br />
 
     <button type="submit" class="btn btn-success"><span class="oi oi-data-transfer-upload"></span>Upload</button>
 </EditForm>
+
+
+<br />
+<br />
+
+<textarea style="width: 100%; max-width: 100%;" readonly @bind="@output" rows="10"></textarea>
+
 
 @code {
     private IBrowserFile browserFile { get; set; }
     private bool displayProgress;
     private int progressPercent;
     private CancellationTokenSource cancelation;
-    string UploadStatus = "";
+    string UploadStatus = string.Empty;
     FileUploadModel uploadModel = new FileUploadModel();
+    string output = string.Empty;
 
     protected override void OnInitialized()
     {
@@ -48,12 +57,17 @@
 
     private async Task OnSubmit()
     {
+        output = string.Empty;
 
-        if (browserFile is null) return;
+        if (browserFile is null)
+        {
+            output = "No file selected!";
+            return;
+        }
 
         if (browserFile.Size > 4096)
         {
-            UploadStatus = $"File {browserFile.Name}, is to big. Its {browserFile.Size} bytes. Max is 4096 bytes";
+            output = $"File {browserFile.Name}, is to big. Its {browserFile.Size} bytes. Max is 4096 bytes";
             return;
         }
 
@@ -78,9 +92,15 @@
 
         displayProgress = false;
 
+        s8service.ClearOutput();
+
         bool initResult = s8service.Parser.s8d.InitExeFromMemory(memStream.ToArray());
 
-        UploadStatus = $"Uploaded {browserFile.Name}, {browserFile.Size} bytes. Debugger initialized {initResult}";
+        s8service.Parser.SourceFileHash = 0; //clear the hash, forcing the Source view to re-assembly first time code is run there.
+
+        //output = $"Uploaded {browserFile.Name}, {browserFile.Size} bytes. Debugger initialized {initResult}";
+
+        output = s8service.GetOutput();
     }
 
 

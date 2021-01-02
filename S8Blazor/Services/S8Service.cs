@@ -98,5 +98,10 @@ namespace S8Blazor.Services
                 parser.ParseCommand(command);
         }
 
+        public string GetDissasmbledCode()
+        {
+            var asm = parser.s8d.DissasembleToList(0, 0xFFF, parser.showAddress, false);
+            return string.Join(Environment.NewLine, asm);
+        }
     }
 }

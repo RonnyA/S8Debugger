@@ -43,7 +43,7 @@
 
     // Height of MonacoEditor is set in CSS - monaco-editor-container
 
-    string _input;
+    string _input = string.Empty;
 
     private MonacoEditor _editor { get; set; }
     public string output { get; set; }
@@ -180,7 +180,7 @@
     private StandaloneEditorConstructionOptions EditorConstructionOptions(MonacoEditor editor)
     {
         string src = GetDefaultSource();
-        input = "";
+
 
         return new StandaloneEditorConstructionOptions
         {
