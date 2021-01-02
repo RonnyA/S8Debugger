@@ -102,7 +102,17 @@ namespace S8Debugger
                             DecodedInstruction = "LAGR r" + argument1; ;
                             ValidInstruction = true;
                             break;
+#if _EXPERIMENTAL_
+                        case 0x2:
+                            DecodedInstruction = "VLAST r" + argument1; ;
+                            ValidInstruction = true;
+                            break;
 
+                        case 0x3:
+                            DecodedInstruction = "VLAGR r" + argument1; ;
+                            ValidInstruction = true;
+                            break;
+#endif
                         default:
                             ErrorMessage = DefaultDecodeError();
                             break;
@@ -150,17 +160,31 @@ namespace S8Debugger
                     DecodedInstruction = logicFunction + "r" + argument1 + ", r" + argument2;
                     break;
 
-                case 0x6: // LES & SKRIV
+                case 0x6: // I/O
                     switch (operation)
                     {
                         case 0x0: //LES
                             DecodedInstruction = "LES r" + argument1;
                             ValidInstruction = true;
                             break;
-                        case 0x1: //LES
+                        case 0x1: //SKRIV
                             DecodedInstruction = "SKRIV r" + argument1;
                             ValidInstruction = true;
                             break;
+#if _EXPERIMENTAL_
+                        case 0x2: //INN
+                            DecodedInstruction = "INN r" + argument1;
+                            ValidInstruction = true;
+                            break;
+                        case 0x3: //UT
+                            DecodedInstruction = "UT r" + argument1;
+                            ValidInstruction = true;
+                            break;
+                        case 0x4: //VSYNC
+                            DecodedInstruction = "VSYNK";
+                            ValidInstruction = true;
+                            break;
+#endif
                         default:
                             ErrorMessage = DefaultDecodeError();
                             break;

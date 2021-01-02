@@ -34,12 +34,16 @@ namespace S8Debugger
 
     public class CpuState
     {
+        public const int MemSize = 4096;
         public int inputPtr = 0;
         public int tick = 0;
         public UInt16 pc = 0;
         public bool flag = false;
         public byte[] regs = new byte[16];
-        public byte[] memory = new byte[4096];
+        public byte[] memory = new byte[MemSize];
+        // Single breakpoint "covers" the whole word
+        public bool[] breakpoints    = new bool[MemSize];
+
         public UInt16 memoryUsed = 0;
 
 
@@ -48,11 +52,17 @@ namespace S8Debugger
         public byte[] stdin = new byte[0];
         public MemoryStream outputStream = new MemoryStream();
         public int maxTicks;
+
+#if _EXPERIMENTAL_
+        public Hardware.S8FrameBuffer HWDisplay = new Hardware.S8FrameBuffer();
+        public Hardware.S8IO HWIO = new Hardware.S8IO();
+#endif
+
     };
 
     public class S8CPU
     {
-
+        
         #region LogEventing
         public delegate void LogMessageEventHandler(Object sender, LogMessageEventArgs e);
 
@@ -125,6 +135,38 @@ namespace S8Debugger
             state.maxTicks = Ticks;
 
         }
+
+        // Stop a running CPU
+        public void Stop()
+        {
+            state.crashed = true;
+        }
+
+        public void ToggleBreakpoint(UInt16 addr)
+        {
+            bool current = state.breakpoints[addr];
+            state.breakpoints[addr] = !current;
+        }
+
+        public void SetBreakpoint(UInt16 addr)
+        {
+            state.breakpoints[addr] = true;
+        }
+
+        public void ClearBreakpoint(UInt16 addr)
+        {
+            state.breakpoints[addr] = false;
+        }
+
+
+        public void ClearAllBreakpoints()
+        {
+            for (int i = 0; i < state.breakpoints.Length; i++)
+            {
+                state.breakpoints[i] = false;
+            }
+        }
+
 
         //const memory = load(executable);
         //let stdout = new Uint8Array();
@@ -275,6 +317,8 @@ namespace S8Debugger
                 // After each step in the CPU tell anyone listening to events about the step. Used to update UI
                 CpuStepInfo(state.pc);
 
+                if (state.breakpoints[state.pc]) return true;
+
             }
 
             if (state.crashed) return false;
@@ -286,6 +330,21 @@ namespace S8Debugger
             return RunSteps(steps);
         }
 
+#if _EXPERIMENTAL_
+
+        // For clarity: These two metods calculate the address identical to the LAST/LAGR addr calculation
+
+        UInt16 GetFrameBufferAddress()
+        {
+            return (UInt16)(this.state.regs[0] + ((UInt16)this.state.regs[1] << 8));
+        }
+
+
+        UInt16 GetIOAddress()
+        {
+            return (UInt16)(this.state.regs[0] + ((UInt16)this.state.regs[1] << 8));
+        }
+#endif
 
         public bool ExecuteInstruction(S8Instruction instr)
         {            
@@ -318,12 +377,28 @@ namespace S8Debugger
             else if (instr.operationClass == 0x4)
             {
                 int addr = ((state.regs[1] << 8) | state.regs[0]) & 0xfff;
-                if (instr.operation == 0) state.regs[instr.argument1] = state.memory[addr];
-                else if (instr.operation == 1) state.memory[addr] = (byte)state.regs[instr.argument1];
-                else
+                switch (instr.operation)
                 {
-                    LogMessage(ERROR_MESSAGE[(int)ERROR_MESSAGE_ID.segmentationFault]);
-                    return false;
+                    case 0: // LAST
+                        state.regs[instr.argument1] = state.memory[addr];
+                        break;
+                    case 1: //LAGR
+                        state.memory[addr] = (byte)state.regs[instr.argument1];
+                        break;
+#if _EXPERIMENTAL_
+                    case 2: //VLAST
+                        state.regs[instr.argument1] = state.HWDisplay.Memory[GetFrameBufferAddress()];
+                        break;
+                    case 3: //VLAGR
+                        UInt16 hwaddr = GetFrameBufferAddress();
+
+                        state.HWDisplay.Memory[hwaddr] = (byte)state.regs[instr.argument1];
+                        break;
+#endif
+                    default:
+                        LogMessage(ERROR_MESSAGE[(int)ERROR_MESSAGE_ID.segmentationFault]);
+                        return false;
+
                 }
             }
 
@@ -353,39 +428,56 @@ namespace S8Debugger
             // I/O
             else if (instr.operationClass == 0x6)
             {
-                // READ
-                if (instr.operation == 0x0)
-                {
-                    if (state.stdin.Length > state.inputPtr)
-                    {
-                        state.regs[instr.argument1] = state.stdin[state.inputPtr++];
-                    }
-                    else
-                    {
-                        LogMessage(ERROR_MESSAGE[(int)ERROR_MESSAGE_ID.readAfterEndOfInput]);
-                        return false;
-                    }
-                }
 
-                // WRITE
-                else if (instr.operation == 0x1)
+                switch (instr.operation)
                 {
-                    if (state.outputStream.Length > 1000)
-                    {
-                        LogMessage(ERROR_MESSAGE[(int)ERROR_MESSAGE_ID.segmentationFault]);
-                        return false;
-                    }
+                    case 0x0: // LES
+                        if (state.stdin.Length > state.inputPtr)
+                        {
+                            state.regs[instr.argument1] = state.stdin[state.inputPtr++];
+                        }
+                        else
+                        {
+                            LogMessage(ERROR_MESSAGE[(int)ERROR_MESSAGE_ID.readAfterEndOfInput]);
+                            return false;
+                        }
 
-                    byte val = state.regs[instr.argument1];
-                    //state.stdout += val.ToString("X2");
+                        break;
 
-                    state.outputStream.Seek(0, SeekOrigin.End);
-                    state.outputStream.WriteByte(val);
-                }
-                else
-                {
-                    LogMessage(ERROR_MESSAGE[(int)ERROR_MESSAGE_ID.segmentationFault]);
-                    return false;
+                    case 0x01: // SKRIV
+                        {
+                            if (state.outputStream.Length > 1000)
+                            {
+                                LogMessage(ERROR_MESSAGE[(int)ERROR_MESSAGE_ID.segmentationFault]);
+                                return false;
+                            }
+
+                            byte val = state.regs[instr.argument1];
+                            //state.stdout += val.ToString("X2");
+
+                            state.outputStream.Seek(0, SeekOrigin.End);
+                            state.outputStream.WriteByte(val);
+                        }
+                        break;
+#if _EXPERIMENTAL_
+                    case 0x02: //INN
+                        state.regs[instr.argument1] = this.state.HWIO.ReadIO(GetIOAddress());
+                        break;
+
+                    case 0x03: //UT
+                        this.state.HWIO.WriteIO(GetIOAddress(), state.regs[instr.argument1]);
+                        break;
+
+                    case 0x04: //VSYNK
+                        this.state.HWDisplay.VSync();
+                        break;
+
+#endif
+                    default:
+                        {
+                            LogMessage(ERROR_MESSAGE[(int)ERROR_MESSAGE_ID.segmentationFault]);
+                            return false;
+                        }
                 }
             }
             // CMP
