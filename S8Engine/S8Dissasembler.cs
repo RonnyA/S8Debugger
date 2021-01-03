@@ -81,6 +81,17 @@ namespace S8Debugger
             return true;
         }
 
+        // Get S8 Image as byte array with Magic
+        public byte[] GetEXE()
+        {
+            byte[] magic = new byte[] { 0x2E, 0x53, 0x4C, 0x45, 0x44, 0x45, 0x38 };
+
+            MemoryStream ms = new MemoryStream();
+            ms.Write(magic);
+            ms.Write(cpu.state.memory,0,cpu.state.memoryUsed);
+
+            return ms.ToArray();
+        }
 
         /// <summary>
         /// Map memory address (most often pc) to source code line.
