@@ -37,7 +37,7 @@
 
 @code
 {
-        string _input;
+    string _input;
     private MonacoEditor _dbg_editor { get; set; }
 
     string asmCode = string.Empty;
@@ -74,7 +74,7 @@
         if (!firstRender)
         {
 
-            await SetLineFocus(_currentLine,_dbg_editor);
+            await SetLineFocus(_currentLine, _dbg_editor);
         }
 
         //return base.OnAfterRenderAsync(firstRender);
@@ -110,7 +110,7 @@
                         GlyphMarginClassName = "decorationGlyphMarginClass"
                     }
                 }
-                };
+                    };
 
         // Scroll
         await editor.RevealLine(sourceCodeLine);
@@ -132,14 +132,14 @@
 
         s8service.ClearOutput();
 
-        if (_currentLine<0) //first time we enter here, the cpu may need a reset
+        if (_currentLine < 0) //first time we enter here, the cpu may need a reset
         {
             s8service.Parser.ParseCommand("RESET");
             Output = s8service.GetOutput();
         }
 
         _currentLine = 1;
-        await SetLineFocus(_currentLine,_dbg_editor);
+        await SetLineFocus(_currentLine, _dbg_editor);
 
         s8service.Parser.ParseCommand("STEP");
         Output = s8service.GetOutput();
