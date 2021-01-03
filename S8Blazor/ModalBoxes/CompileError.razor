@@ -1,0 +1,17 @@
+﻿<div>
+    <br />
+    @ErrorString
+    <br />
+    <br />
+    <br />
+
+    <button @onclick="Cancel" class="btn btn-primary">Cancel</button>
+</div>
+
+@code {
+    [CascadingParameter] BlazoredModalInstance BlazoredModal { get; set; }
+    [Parameter] public string ErrorString { get; set; }
+
+    async Task Cancel() => await BlazoredModal.Cancel();
+
+}
