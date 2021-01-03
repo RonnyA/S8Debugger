@@ -33,10 +33,10 @@ namespace S8Debugger.Hardware
 
             Color c = defaultVGAPalette[value];
 
-            Memory[memoryAddr++] = c.R;
-            Memory[memoryAddr++] = c.G;
-            Memory[memoryAddr++] = c.B;
-            Memory[memoryAddr++] = c.A;
+            Memory[memoryAddr] = c.R;
+            Memory[memoryAddr+1] = c.G;
+            Memory[memoryAddr+2] = c.B;
+            Memory[memoryAddr+3] = c.A;
         }
 
         public void VSync()

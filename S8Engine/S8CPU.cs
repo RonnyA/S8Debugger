@@ -53,10 +53,6 @@ namespace S8Debugger
         public MemoryStream outputStream = new MemoryStream();
         public int maxTicks;
 
-#if _EXPERIMENTAL_
-        public Hardware.S8FrameBuffer HWDisplay = new Hardware.S8FrameBuffer();
-        public Hardware.S8IO HWIO = new Hardware.S8IO();
-#endif
 
     };
 
@@ -105,6 +101,12 @@ namespace S8Debugger
 
         public CpuState state;
         public CpuStack stack;
+
+#if _EXPERIMENTAL_
+        public Hardware.S8FrameBuffer HWDisplay = new Hardware.S8FrameBuffer();
+        public Hardware.S8IO HWIO = new Hardware.S8IO();
+#endif
+
 
         public enum ERROR_MESSAGE_ID { segmentationFault, recursionLimitExceeded, fileSizeTooBig, readAfterEndOfInput, unsupportedExecutable, resourcesExhausted };
 
@@ -388,11 +390,11 @@ namespace S8Debugger
                         break;
 #if _EXPERIMENTAL_
                     case 2: //VLAST
-                        state.regs[instr.argument1] = state.HWDisplay.Memory[GetFrameBufferAddress()];
+                        state.regs[instr.argument1] = this.HWDisplay.Memory[GetFrameBufferAddress()];
                         break;
                     case 3: //VLAGR
                         UInt16 hwaddr = GetFrameBufferAddress();
-                        state.HWDisplay.Write(hwaddr, (byte)state.regs[instr.argument1]);
+                        this.HWDisplay.Write(hwaddr, (byte)state.regs[instr.argument1]);
                         break;
 #endif
                     default:
@@ -461,15 +463,15 @@ namespace S8Debugger
                         break;
 #if _EXPERIMENTAL_
                     case 0x02: //INN
-                        state.regs[instr.argument1] = this.state.HWIO.ReadIO(GetIOAddress());
+                        state.regs[instr.argument1] = this.HWIO.ReadIO(GetIOAddress());
                         break;
 
                     case 0x03: //UT
-                        this.state.HWIO.WriteIO(GetIOAddress(), state.regs[instr.argument1]);
+                        this.HWIO.WriteIO(GetIOAddress(), state.regs[instr.argument1]);
                         break;
 
                     case 0x04: //VSYNK
-                        this.state.HWDisplay.VSync();
+                        this.HWDisplay.VSync();
                         break;
 
 #endif

@@ -20,7 +20,7 @@
 
 @code {
     public string output { get; set; }
-    
+
 
     private async Task RunCode()
     {
@@ -30,15 +30,29 @@
         //s8service.Parser.ParseCommand("RUN!");        
         //output = s8service.GetOutput();
 
-        this.Running = true;
-        output ="Running";
-    }
+        if (s8service.Parser.s8d.cpu.state.memoryUsed == 0)
+        {
+            output = "No code loaded";
+            return;
+        }
 
+        await this.StartVGALoop();
+
+        if (this.Running)
+        {
+            output = "Running";
+        }
+        else
+        {
+            output = "Didnt start";
+        }
+    }
 
     private async Task StopCode()
     {
         //s8service.Parser.s8d.Stop();
-        this.Running = false;
+        await this.StopVGALoop();
+
         output ="Stopped";
     }
 
@@ -47,12 +61,12 @@
         string src = getSampleCode();
         s8service.Parser.SetSourceCode(src);
         s8service.Parser.AssembleSourceCode();
-    output ="Ready";
+        output ="Ready";
     }
-    
+
     private string getSampleCode()
     {
-return @"
+        return @"
 ; SLEDE8++ is an extended version of SLEDE8 computer. It is equipped
 ; with an experimental VGA graphics chip. VGA was named after the
 ; initials of the three NPST employees working on the project:
