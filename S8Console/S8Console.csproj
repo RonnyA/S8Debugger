@@ -5,6 +5,10 @@
     <TargetFramework>net5.0</TargetFramework>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <DefineConstants>TRACE;_EXPERIMENTAL_</DefineConstants>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="Terminal.Gui" Version="0.90.3" />
   </ItemGroup>
