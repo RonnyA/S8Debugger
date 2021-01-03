@@ -14,6 +14,10 @@ https://github.com/julebokk/slede8dbg/commit/1b91f2af48060c53f04f761521d37c78962
 The Blazor/Javascript code to update the VGA UI is borrowed and refactored from
 https://github.com/EngstromJimmy/ZXSpectrum
 
+The Modal box functionality for Blazor is from Blazored.Modal NuGet package
+https://github.com/Blazored/Modal
+
+
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
 in the Software without restriction, including without limitation the rights
