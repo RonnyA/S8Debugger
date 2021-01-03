@@ -26,7 +26,7 @@ namespace S8Blazor.Pages
         private bool Vsync = true;
 
         [Inject]
-        protected IS8Service s8service { get; set; }
+        public IS8Service s8service { get; set; }
 
         [Inject]
         protected HttpClient Http { get; set; }
@@ -61,7 +61,9 @@ namespace S8Blazor.Pages
         }
         protected async override Task OnInitializedAsync()
         {
+#if _EXPERIMENTAL_
             s8service.Parser.s8d.cpu.state.HWDisplay.OnVSync += HWDisplay_OnVSync;
+#endif
             vgaLoop.Start();
             
             await base.OnInitializedAsync();
@@ -76,12 +78,16 @@ namespace S8Blazor.Pages
         public void Dispose()
         {
             // Clean up hooked event handlers
+#if _EXPERIMENTAL_
             s8service.Parser.s8d.cpu.state.HWDisplay.OnVSync -= HWDisplay_OnVSync;
+#endif
         }
 
         public async void Paint()
         {
-            //if (!Vsync) return;
+            if (!Vsync) return;
+
+#if _EXPERIMENTAL_
 
             var screen = s8service.Parser.s8d.cpu.state.HWDisplay.Memory;
 
@@ -91,6 +97,7 @@ namespace S8Blazor.Pages
             var mono = JSRuntime as WebAssemblyJSRuntime;
             mono.InvokeUnmarshalled<IntPtr, string>("PaintCanvas", pinned);
             gch.Free();
+#endif
 
             Vsync = false;
         }
