@@ -1,0 +1,55 @@
+﻿@page "/Download"
+@inject IS8Service s8service
+@using System.ComponentModel.DataAnnotations
+@using System.IO
+@using System.Linq
+@using System.Threading
+@inject IJSRuntime JSRuntime
+
+
+
+<div class="alert alert-primary" role="alert">
+    SLEDE8 Download S8 binary
+</div>
+
+<div class="form-group">
+    <label for="Filename">Filename</label>
+    <input class="form-control" id="Filename" @bind="@filename" placeholder="Filename" />    
+</div>
+
+<button class="btn btn-primary" @onclick="DownloadS8">Download</button>
+
+<br />
+<br />
+
+<textarea style="width: 100%; max-width: 100%;" readonly @bind="@output" rows="10"></textarea>
+
+
+@code {
+    string output = string.Empty;
+    string filename = "s8";
+
+    protected override Task OnInitializedAsync()
+    {
+        output = $"Current loaded S8 program is {s8service.Parser.s8d.cpu.state.memoryUsed} bytes";
+        return base.OnInitializedAsync();
+    }
+
+
+
+    private async Task DownloadS8()
+    {
+        // Generate a file
+        byte[] file = s8service.Parser.s8d.GetEXE();
+
+        await JSRuntime.InvokeVoidAsync(
+            "downloadFromByteArray",
+        new
+        {
+            ByteArray = file,
+            FileName = filename+".s8",
+            ContentType = "application/octet-stream"
+        });
+    }
+
+}
