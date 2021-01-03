@@ -8,6 +8,10 @@
     <DefineConstants>TRACE;_EXPERIMENTAL_</DefineConstants>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <DefineConstants>TRACE;_EXPERIMENTAL_</DefineConstants>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="Blazor.Extensions.Canvas" Version="1.1.0-preview1" />
     <PackageReference Include="BlazorMonaco" Version="1.6.0" />
