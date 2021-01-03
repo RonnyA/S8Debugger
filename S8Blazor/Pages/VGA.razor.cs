@@ -3,10 +3,7 @@ using Microsoft.JSInterop;
 using Microsoft.JSInterop.WebAssembly;
 using S8Blazor.Services;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Net.Http;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Timers;
@@ -22,64 +19,80 @@ namespace S8Blazor.Pages
         System.Timers.Timer vgaLoop;
 
         public bool Running = false;
-
-        private bool Vsync = true;
-
-        [Inject]
-        public IS8Service s8service { get; set; }
+        private bool Vsync = false;
 
         [Inject]
-        protected HttpClient Http { get; set; }
+        protected IS8Service s8service { get; set; }
+
         [Inject]
         protected IJSRuntime JSRuntime { get; set; }
 
         public VGAModel()
         {
-            vgaLoop = new System.Timers.Timer(20);
-            vgaLoop.Elapsed += vgaLoop_Elapsed;        
+            vgaLoop = new Timer(20);
+            vgaLoop.Elapsed += vgaLoop_Elapsed;
+        }
+
+
+        public async Task StartVGALoop()
+        {
+            // Enable VGA loop
+            Running = true;
+        }
+
+        public async Task StopVGALoop()
+        {            
+            Running = false;
         }
 
         private async void vgaLoop_Elapsed(object sender, ElapsedEventArgs e)
         {
-
+            vgaLoop.Enabled = false;
             if (Running)
             {
                 s8service.Parser.s8d.SetMaxTicks(2000000);
-                if (!s8service.Parser.s8d.cpu.Step(100000))
+                if (!s8service.Parser.s8d.cpu.Step(66667))
                 {
                     Running = false;                    
                 }
 
                 Paint();                                    
             }
+            vgaLoop.Enabled = true;
         }
 
         protected async override void OnAfterRender(bool firstRender)
         {
-            await JSRuntime.InvokeAsync<bool>("InitCanvas");
+            if (firstRender)
+            {
+                await JSRuntime.InvokeAsync<bool>("InitCanvas");
+            }
             base.OnAfterRender(firstRender);
         }
-        protected async override Task OnInitializedAsync()
+
+        protected override Task OnInitializedAsync()
         {
 #if _EXPERIMENTAL_
-            s8service.Parser.s8d.cpu.state.HWDisplay.OnVSync += HWDisplay_OnVSync;
+            s8service.Parser.s8d.cpu.HWDisplay.OnVSync += HWDisplay_OnVSync;
 #endif
             vgaLoop.Start();
-            
-            await base.OnInitializedAsync();
+            return base.OnInitializedAsync();
         }
+
         private void HWDisplay_OnVSync(bool obj)
-        {
-            Debug.WriteLine("VSync -" + DateTime.Now.ToUniversalTime());
+        {            
             // Paint to the canvas
             Vsync = true;            
         }
 
         public void Dispose()
         {
+            vgaLoop.Stop();
+            vgaLoop.Elapsed += vgaLoop_Elapsed;
+
             // Clean up hooked event handlers
 #if _EXPERIMENTAL_
-            s8service.Parser.s8d.cpu.state.HWDisplay.OnVSync -= HWDisplay_OnVSync;
+            s8service.Parser.s8d.cpu.HWDisplay.OnVSync -= HWDisplay_OnVSync;
 #endif
         }
 
@@ -89,7 +102,7 @@ namespace S8Blazor.Pages
 
 #if _EXPERIMENTAL_
 
-            var screen = s8service.Parser.s8d.cpu.state.HWDisplay.Memory;
+            var screen = s8service.Parser.s8d.cpu.HWDisplay.Memory;
 
             //Allocate memory
             var gch = GCHandle.Alloc(screen, GCHandleType.Pinned);

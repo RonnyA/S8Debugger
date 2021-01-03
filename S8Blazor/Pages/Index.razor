@@ -153,8 +153,8 @@
             {                    
                 s8service.Parser.SourceFileHash = 0; // Force a new compile next time because HASH wil differ
 
-                string error = s8ex.Message + "\r\nLine: " + s8ex.SourceCodeLine.ToString();
-                await ShowError(error);
+                //string error = s8ex.Message + "\r\nLine: " + s8ex.SourceCodeLine.ToString();
+                await ShowError(s8ex.Message,s8ex.SourceCodeLine);
 
                 if (s8ex.SourceCodeLine>0)
                 {
@@ -164,17 +164,18 @@
             }
             catch (Exception ex)
             {
-                await ShowError(ex.ToString());
+                await ShowError(ex.ToString(),0);
             }            
         }
     }
 
-    private async Task ShowError(string errorMessage)
+    private async Task ShowError(string errorMessage,int sourceLine)
     {
         // Uses Blazored.Modal - https://github.com/Blazored/Modal
 
         var parameters = new ModalParameters();
         parameters.Add(nameof(CompileError.ErrorString), errorMessage);
+        parameters.Add(nameof(CompileError.SourceLine), sourceLine);
 
         var errorModal = Modal.Show<CompileError>("Compile error", parameters);
         var result = await errorModal.Result;
