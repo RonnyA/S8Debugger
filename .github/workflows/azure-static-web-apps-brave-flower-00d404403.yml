@@ -22,8 +22,7 @@ jobs:
         with:
           node-version: '14'
           check-latest: true
-      - run: npm install
-      - run: npm test
+      - run: npm install      
       - name: Build And Deploy
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v0.0.1-preview
