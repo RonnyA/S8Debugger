@@ -58,7 +58,8 @@ namespace S8Debugger
 
     public class S8CPU
     {
-        
+        CpuStepInfo _csi = new CpuStepInfo();
+
         #region LogEventing
         public delegate void LogMessageEventHandler(Object sender, LogMessageEventArgs e);
 
@@ -88,11 +89,13 @@ namespace S8Debugger
             handler?.Invoke(this, e);
         }
 
+        
+
         private void CpuStepInfo(UInt16 pc)
         {
-            CpuStepInfo csi = new CpuStepInfo();
-            csi.pc = pc;
-            OnCpuStepInfo(csi);
+            //CpuStepInfo csi = new CpuStepInfo();
+            _csi.pc = pc;
+            OnCpuStepInfo(_csi);
         }
         #endregion LogEventing
 
