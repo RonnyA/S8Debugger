@@ -13,7 +13,7 @@
     [Parameter] public string ErrorString { get; set; }
     [Parameter] public int SourceLine { get; set; }
 
-    async Task Cancel() => await BlazoredModal.Cancel();
+    async Task Cancel() => await BlazoredModal.CancelAsync();
 
     string ErrorLine = "";
 
