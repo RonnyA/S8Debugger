@@ -1,5 +1,6 @@
 ﻿using System;
 using S8Console.GUI;
+using S8Console.WinGui;
 using S8Debugger;
 
 namespace S8Console
@@ -7,6 +8,9 @@ namespace S8Console
     class Program
     {
         static bool disableConsoleLogging = false;
+
+        static VgaView vgaView;
+        static S8CommandParser parser;
 
         static void Main(string[] args)
         {
@@ -16,10 +20,13 @@ namespace S8Console
 
             string defaultS8File = @"s8.s8";
 
-            S8CommandParser parser = new S8CommandParser();
+            parser = new S8CommandParser();
             parser.MessageHandler += Parser_Message;
 
             parser.s8d.Init(defaultS8File);
+
+
+            parser.s8d.cpu.HWDisplay.OnVSync += HWDisplay_OnVSync;
 
 
             Console.WriteLine("Velkommen til Slede8 debugger");
@@ -29,7 +36,7 @@ namespace S8Console
             Console.WriteLine("Enter command 'GUI' to enter GUI mode");
             Console.WriteLine("");
 
-            bool debugging = true;            
+            bool debugging = true;
 
             while (debugging)
             {
@@ -53,14 +60,14 @@ namespace S8Console
                     case "DIE":
                         debugging = false;
                         break;
-                        
+
                     case "CLS":
                         Console.Clear();
                         break;
 
                     case "G":
                     case "GUI":
-                        
+
                         var s8gui = new S8Gui(parser);
                         disableConsoleLogging = true;
                         s8gui.RunGui(null);
@@ -70,13 +77,64 @@ namespace S8Console
                         Console.BackgroundColor = ConsoleColor.Black;
                         Console.ForegroundColor = ConsoleColor.Green;
                         break;
+
+                    case "W":
+                    case "WIN":
+                    case "WINRUN":
+                        if (vgaView is null)
+                        {
+                            initVga();
+                        }
+                        if (vgaView is not null)
+                        {
+                            vgaView.RunUI();
+                            vgaView.CleanupSDL();
+                            vgaView = null;
+                        }
+                        else
+                        {
+                            Console.WriteLine("Failed to initialize SDL2/WIN");
+                        }
+                        break;
                     default:
                         parser.ParseCommand(input);
                         break;
+
+
                 }
 
 
             }
+
+            if (vgaView is not null)
+            {
+                vgaView.CleanupSDL();
+                vgaView = null;
+            }
+        }
+
+        static void initVga()
+        {
+            if (vgaView is null)
+            {
+                vgaView = new();
+                if (vgaView.InitVga(parser) == false)
+                {
+                    vgaView = null;
+                    return;
+                }
+            }
+        }
+
+        private static void HWDisplay_OnVSync(bool obj)
+        {
+            if (vgaView is null)
+            {
+                Console.WriteLine("Detected VSync. This could should be run in a windows using WINRUN");
+                return;
+            }
+            
+            vgaView.UpdateDisplay();
         }
 
         //private static void SaveToS8File(byte[] s8prog, string s8outputfile)

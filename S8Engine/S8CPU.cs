@@ -273,7 +273,7 @@ namespace S8Debugger
         /// <param name="verbose"></param>
         /// <param name="showaddress"></param>
         /// <returns></returns>
-        internal bool RunSteps(int runSteps)
+        public bool RunSteps(int runSteps)
         {
 
             int stepsLeft = 1;// Default 1 step left
