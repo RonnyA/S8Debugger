@@ -26,7 +26,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Terminal.Gui" Version="0.90.3" />
+    <PackageReference Include="Terminal.Gui" Version="1.1.1" />
   </ItemGroup>
 
   <ItemGroup>
