@@ -1,28 +1,38 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
 
   <PropertyGroup>
-    <TargetFramework>net5.0</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
+    <RunAOTCompilation>true</RunAOTCompilation>
     <Platforms>AnyCPU;x86</Platforms>
+    <PlatformTarget>AnyCPU</PlatformTarget>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <DefineConstants>TRACE;_EXPERIMENTAL_</DefineConstants>
+    <RunAOTCompilation>True</RunAOTCompilation>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x86'">
     <DefineConstants>TRACE;_EXPERIMENTAL_</DefineConstants>
+    <RunAOTCompilation>True</RunAOTCompilation>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
     <DefineConstants>TRACE;_EXPERIMENTAL_</DefineConstants>
+    <RunAOTCompilation>True</RunAOTCompilation>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x86'">
     <DefineConstants>TRACE;_EXPERIMENTAL_</DefineConstants>
+    <RunAOTCompilation>True</RunAOTCompilation>
   </PropertyGroup>
 
   <ItemGroup>
     <None Remove="downloadHelper.ts" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <TypeScriptCompile Remove="TypeScript\downloadHelper.ts" />
   </ItemGroup>
 
   <ItemGroup>
@@ -43,6 +53,10 @@
 
   <ItemGroup>
     <Folder Include="wwwroot\script\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="TypeScript\downloadHelper.ts" />
   </ItemGroup>
 
 </Project>
