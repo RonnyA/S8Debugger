@@ -22,6 +22,7 @@ jobs:
         with:
           node-version: '14'
           check-latest: true
+      - uses: iCrawl/action-tsc@v1  
       - run: npm install      
       - name: Build And Deploy
         id: builddeploy
