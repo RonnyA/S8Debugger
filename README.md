@@ -14,11 +14,11 @@ Denne koden kan fritt kopieres og brukes, pull requests er velkommen.
 ## Building 
 
 Denne koden fungerer like fint på Windows som under Linux.
-Kravene er at du har [.NET 5](https://dotnet.microsoft.com/download/dotnet/5.0) installert.
+Kravene er at du har [.NET 6](https://dotnet.microsoft.com/download/dotnet/6.0) installert.
 Deretter cloner du (eller laster ned Git repo)
 
 ```
-    1. Installer .NET5 fra https://dotnet.microsoft.com/download/dotnet/5.0
+    1. Installer .NET6 fra https://dotnet.microsoft.com/download/dotnet/6.0
     2. git clone https://github.com/RonnyA/S8Debugger.git
     3. cd S8Debugger\S8Console
     4. dotnet run
