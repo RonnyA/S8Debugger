@@ -34,7 +34,7 @@ namespace S8Debugger
 
     public class CpuState
     {
-        public const int MemSize = 4096;
+        public const int MemSize = 4096*10;
         public int inputPtr = 0;
         public int tick = 0;
         public UInt16 pc = 0;
@@ -190,7 +190,7 @@ namespace S8Debugger
 
             ResetRegs();
 
-            if (executable.Length > 4096)
+            if (executable.Length > 4096*10)
             {
                 LogMessage(ERROR_MESSAGE[(int)ERROR_MESSAGE_ID.fileSizeTooBig]);
                 return null;
@@ -202,7 +202,7 @@ namespace S8Debugger
                 return null;
             }
 
-            state.memory = new byte[4096];
+            state.memory = new byte[4096*10];
             int seek = 7;
 
             UInt16 i = 0;
