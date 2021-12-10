@@ -75,7 +75,7 @@ namespace S8Debugger
         };
 
         public class Instruction
-        {            
+        {
             public int LineNo;
             public string opCode;
             public List<string> args = new List<string>();
@@ -156,10 +156,24 @@ namespace S8Debugger
 
         public Target AssembleSourceCode(string sledeTekst)
         {
-            LogMessage("Compiling.....");
-            var result = assemble(sledeTekst);
-            LogMessage($"Compiled OK! {result.pdb.Length} instructions");
-           
+            Target result = null;
+
+            try
+            {
+                LogMessage("Compiling.....");
+                result = assemble(sledeTekst);
+                LogMessage($"Compiled OK! {result.pdb.Length} instructions");
+            }
+            catch (S8AssemblerException s8ex)
+            {
+                LogMessage($"Assembler error: {s8ex.Message} at line {s8ex.SourceCodeLine}"); 
+            }
+            catch (Exception unknownEx)
+            {
+
+                LogMessage("Unknown exception: " + unknownEx.ToString());
+            }
+
             return result;
         }
 
@@ -254,7 +268,7 @@ namespace S8Debugger
             //var merge = splitSpace.AsQueryable().Where((a, index) => a.Length > 0 && index > 1); //.Join("").Split(",");
 
             string merge = string.Empty;
-            for (int i=1;i<splitSpace.Length;i++)
+            for (int i = 1; i < splitSpace.Length; i++)
             {
                 merge += splitSpace[i];
             }
@@ -268,7 +282,7 @@ namespace S8Debugger
                     instr.args.Add(splitTrimmed);
                 }
             }
-            
+
 
             return instr;
             /*
@@ -318,11 +332,11 @@ namespace S8Debugger
 
             switch (instruction.opCode)
             {
-                case "STOPP":                    
-                    returnCode= writeHalt(instruction.ensureNoArgs());
+                case "STOPP":
+                    returnCode = writeHalt(instruction.ensureNoArgs());
                     break;
                 case "SETT":
-                    returnCode= writeSet(instruction.twoArguments());
+                    returnCode = writeSet(instruction.twoArguments());
                     break;
 
                 case "FINN":
@@ -353,7 +367,7 @@ namespace S8Debugger
                 case "PLUSS":
                 case "MINUS":
                     byte bOps = (byte)Array.IndexOf(aluOps, instruction.opCode);
-                    returnCode= writeAlu(bOps, instruction.twoArguments());
+                    returnCode = writeAlu(bOps, instruction.twoArguments());
                     break;
 
                 // I/O
@@ -362,7 +376,7 @@ namespace S8Debugger
                     break;
 
                 case "SKRIV":
-                    returnCode= writeWrite(instruction.singleArg());
+                    returnCode = writeWrite(instruction.singleArg());
                     break;
 
 #if _EXPERIMENTAL_
@@ -374,9 +388,9 @@ namespace S8Debugger
                     returnCode = writeIOWrite(instruction.singleArg());
                     break;
 
-                case "VSYNK":                    
+                case "VSYNK":
                     returnCode = writeVSync(instruction.ensureNoArgs());
-                    break;                    
+                    break;
 #endif
 
                 // CMP
@@ -402,16 +416,16 @@ namespace S8Debugger
                     returnCode = writeCall(instruction.singleArg(), labels);
                     break;
 
-                case "RETUR":                    
+                case "RETUR":
                     returnCode = writeRet(instruction.ensureNoArgs());
                     break;
 
-                case "NOPE":                    
+                case "NOPE":
                     returnCode = writeNop(instruction.ensureNoArgs());
                     break;
 
                 default:
-                    throw new S8AssemblerException(ERROR_MESSAGE[(int)ERROR_MESSAGE_ID.unexpectedToken].Replace("{token}", $"{instruction.opCode}"), currentLine);                    
+                    throw new S8AssemblerException(ERROR_MESSAGE[(int)ERROR_MESSAGE_ID.unexpectedToken].Replace("{token}", $"{instruction.opCode}"), currentLine);
             }
 
             return Uint8Array(returnCode); // will never happen - just put here to make compiler silent
@@ -470,7 +484,7 @@ namespace S8Debugger
                 // Then instructions
                 foreach (InstructionInfo instr in sourceMap.instructions)
                 {
-                    
+
                     currentLine = instr.lineNumber; // Global variable used by execptions
 
                     var instruction = tokenize(instr.raw);
@@ -484,12 +498,12 @@ namespace S8Debugger
 
             /// Map debug info
             t.pdb = new DebugInfo[sourceMap.instructions.Count];
-            for (int i = 0; i < sourceMap.instructions.Count; i++) 
+            for (int i = 0; i < sourceMap.instructions.Count; i++)
             {
                 t.pdb[i] = new DebugInfo();
                 t.pdb[i].address = sourceMap.instructions[i].address;
                 t.pdb[i].info = sourceMap.instructions[i];
-            };                        
+            };
 
             return t;
         }
@@ -541,7 +555,7 @@ namespace S8Debugger
 
         UInt16 parseVal(string valStr)
         {
-            if ( (valStr.StartsWith("0x")) | (valStr.StartsWith("0X")))
+            if ((valStr.StartsWith("0x")) | (valStr.StartsWith("0X")))
             {
                 return (UInt16)int.Parse(valStr.Substring(2), System.Globalization.NumberStyles.HexNumber);
             }
@@ -569,12 +583,12 @@ namespace S8Debugger
 
         byte getReg(string regStr)
         {
-            if (!regStr.StartsWith('r')) 
+            if (!regStr.StartsWith('r'))
                 throw new S8AssemblerException(ERROR_MESSAGE[(int)ERROR_MESSAGE_ID.invalidRegistry].Replace("{reg}", regStr), currentLine);
 
             byte regNum = (byte)parseVal(regStr.Substring(1));
 
-            if (regNum< 0 || regNum> 15)
+            if (regNum < 0 || regNum > 15)
                 throw new S8AssemblerException(ERROR_MESSAGE[(int)ERROR_MESSAGE_ID.invalidRegistry].Replace("{reg}", regStr), currentLine);
 
             return regNum;
@@ -582,16 +596,20 @@ namespace S8Debugger
 
         UInt16 getAddr(string addrStr, Labels labels)
         {
-            if (isVal(addrStr))
-            {
-                return getVal(addrStr);
-            }
 
             UInt16 address = labels.mapLabelToAddress(addrStr);
 
             if (address == UNDEFINED)
             {
-                //throw ERROR_MESSAGE.unexpectedToken(addrStr); //TOFIX
+                if (isVal(addrStr))
+                {
+                    return getVal(addrStr);
+                }
+                else
+                {
+
+                    throw new S8AssemblerException(ERROR_MESSAGE[(int)ERROR_MESSAGE_ID.unexpectedToken].Replace("{token}", addrStr), currentLine);
+                }
             }
 
             return address;
@@ -607,7 +625,7 @@ namespace S8Debugger
         {
 
             string reg1 = args[0];
-            string regOrValue = args[1];            
+            string regOrValue = args[1];
 
             byte reg1Num = getReg(reg1);
 
@@ -618,7 +636,7 @@ namespace S8Debugger
             }
             else
             {
-                byte  reg2Num = getReg(regOrValue);
+                byte reg2Num = getReg(regOrValue);
                 return nibsByte(2, reg1Num, reg2Num);
             }
         }
@@ -704,7 +722,7 @@ namespace S8Debugger
 
         // IO routines. VGA VSYNC = subcode 4
         UInt16 writeVSync(string arg)
-        {                        
+        {
             return nibs(6, 4, 0, 0);
         }
 
@@ -749,7 +767,8 @@ namespace S8Debugger
     {
         public int SourceCodeLine { get; set; }
         public S8AssemblerException() : base() { }
-        public S8AssemblerException(string message, int sourceLine) : base(message) {
+        public S8AssemblerException(string message, int sourceLine) : base(message)
+        {
             SourceCodeLine = sourceLine;
         }
     }
