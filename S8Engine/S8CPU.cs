@@ -451,11 +451,15 @@ namespace S8Debugger
 
                     case 0x01: // SKRIV
                         {
-                            if (state.outputStream.Length > 1000)
-                            {
-                                LogMessage(ERROR_MESSAGE[(int)ERROR_MESSAGE_ID.segmentationFault]);
-                                return false;
-                            }
+                            // This limit broke the runner for the NPST 2021 day 7.
+
+                            // It was put in as a security measure, but it created just pain :-(
+                            // Removed!!!
+                            //if (state.outputStream.Length > 1000)
+                            //{
+                            //    LogMessage(ERROR_MESSAGE[(int)ERROR_MESSAGE_ID.segmentationFault]);
+                            //    return false;
+                            //}
 
                             byte val = state.regs[instr.argument1];
                             //state.stdout += val.ToString("X2");
