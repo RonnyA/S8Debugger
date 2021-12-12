@@ -58,6 +58,7 @@
     protected override async Task OnInitializedAsync()
     {
         s8service.Parser.s8d.cpu.CpuStepHandler += CpuStepLineHandler;
+        s8service.Parser.s8d.cpu.SetMaxTicks(2000000);
     }
 
     public void Dispose()
