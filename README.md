@@ -32,7 +32,7 @@ Om du ønsker å kjøre Blazor (Client side WebAssembly) versjonen
     2. dotnet run
 ```
 
-Siste build er deployet som en [Static Web App](https://brave-flower-00d404403.azurestaticapps.net/)
+Siste build er deployet som en [Static Web App](https://slede8.hackercorp.no/)
 
 ![Azure Static Web Apps CI/CD](https://github.com/RonnyA/S8Debugger/workflows/Azure%20Static%20Web%20Apps%20CI/CD/badge.svg)
 
