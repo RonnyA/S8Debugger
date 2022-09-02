@@ -1,6 +1,5 @@
 ﻿@page "/"
 @inject IS8Service s8service
-@inject IModalService Modal
 @implements IDisposable
 
 <div class="alert alert-primary" role="alert">
@@ -174,13 +173,15 @@
     {
         // Uses Blazored.Modal - https://github.com/Blazored/Modal
 
+            // TODO: Find another way to show error
+        /*
         var parameters = new ModalParameters();
         parameters.Add(nameof(CompileError.ErrorString), errorMessage);
         parameters.Add(nameof(CompileError.SourceLine), sourceLine);
 
         var errorModal = Modal.Show<CompileError>("Compile error", parameters);
         var result = await errorModal.Result;
-
+        */
     }    
 
     private async Task StepCode()
