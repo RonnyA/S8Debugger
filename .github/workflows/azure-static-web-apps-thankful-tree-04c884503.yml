@@ -38,7 +38,7 @@ jobs:
           action: "upload"
           ###### Repository/Build Configurations - These values can be configured to match your app requirements. ######
           # For more information regarding Static Web App workflow configurations, please visit: https://aka.ms/swaworkflowconfig
-          app_location: "S8Debugger/output" # App source code path
+          app_location: "output/wwwroot" # App source code path
           api_location: "Api" # Api source code path - optional
           #output_location: "wwwroot" # Built app content directory - optional
           output_location: ''
