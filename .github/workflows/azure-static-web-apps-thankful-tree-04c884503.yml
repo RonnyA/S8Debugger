@@ -21,7 +21,7 @@ jobs:
           dotnet-version: '7.0.x'
           include-prerelease: true
       - run: dotnet workload restore      
-      - run: dotnet publish -c Release /p:TargetArchitecture=wasm /p:TargetOS=Browser .\S8Blazor\S8Blazor.csproj
+      - run: dotnet publish -c Release /p:TargetArchitecture=wasm /p:TargetOS=Browser ./S8Blazor/S8Blazor.csproj
       - name: Build And Deploy
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1
