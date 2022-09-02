@@ -15,9 +15,13 @@ jobs:
     runs-on: ubuntu-latest
     name: Build and Deploy Job
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
+      - uses: actions/setup-dotnet@v2
         with:
-          submodules: true
+          dotnet-version: '7.0.x'
+          include-prerelease: true
+      - run:
+          dotnet workload restore
       - name: Build And Deploy
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1
