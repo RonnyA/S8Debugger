@@ -24,10 +24,10 @@ jobs:
           include-prerelease: true
           
       - name: Fetch WASM tools
-      - run: dotnet workload restore
+        run: dotnet workload restore
 
       - name: Build and Publish WASM app
-      - run: dotnet publish -c Release /p:TargetArchitecture=wasm /p:TargetOS=Browser --output output ./S8Blazor/S8Blazor.csproj
+        run: dotnet publish -c Release /p:TargetArchitecture=wasm /p:TargetOS=Browser --output output ./S8Blazor/S8Blazor.csproj
 
       - name: Deploy
         id: builddeploy
