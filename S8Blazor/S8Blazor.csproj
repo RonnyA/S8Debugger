@@ -8,22 +8,22 @@
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <DefineConstants></DefineConstants>
+    <DefineConstants>_EXPERIMENTAL_;NET7</DefineConstants>
     <RunAOTCompilation>True</RunAOTCompilation>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x86'">
-    <DefineConstants></DefineConstants>
+    <DefineConstants>_EXPERIMENTAL_;NET7</DefineConstants>
     <RunAOTCompilation>True</RunAOTCompilation>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-    <DefineConstants></DefineConstants>
+    <DefineConstants>_EXPERIMENTAL_;NET7</DefineConstants>
     <RunAOTCompilation>True</RunAOTCompilation>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x86'">
-    <DefineConstants></DefineConstants>
+    <DefineConstants>_EXPERIMENTAL_;NET7</DefineConstants>
     <RunAOTCompilation>True</RunAOTCompilation>
   </PropertyGroup>
 
